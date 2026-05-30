@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: billcore
+          POSTGRES_PASSWORD: secret
+          POSTGRES_DB: billcore
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Install golang-migrate
+        run: |
+          curl -L https://github.com/golang-migrate/migrate/releases/download/v4.17.1/migrate.linux-amd64.tar.gz | tar xvz
+          sudo mv migrate /usr/local/bin/
+
+      - name: Run migrations
+        env:
+          DATABASE_URL: postgres://billcore:secret@localhost:5432/billcore?sslmode=disable
+        run: migrate -path ./migrations -database "$DATABASE_URL" up
+
+      - name: Build
+        run: go build ./...
+
+      - name: Test
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: billcore
+          DB_PASSWORD: secret
+          DB_NAME: billcore
+        run: go test ./...
