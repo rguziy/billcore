@@ -101,6 +101,15 @@ func (h *ClientHandler) ListLocations(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, locs)
 }
 
+func (h *ClientHandler) ListAllLocations(w http.ResponseWriter, r *http.Request) {
+	locs, err := h.repo.GetAllLocations(r.Context())
+	if err != nil {
+		writeError(w, err, http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, locs)
+}
+
 func (h *ClientHandler) CreateLocation(w http.ResponseWriter, r *http.Request) {
 	id, err := pathID(r, "id")
 	if err != nil {
@@ -119,6 +128,38 @@ func (h *ClientHandler) CreateLocation(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusCreated)
 	writeJSON(w, l)
+}
+
+func (h *ClientHandler) UpdateLocation(w http.ResponseWriter, r *http.Request) {
+	id, err := pathID(r, "id")
+	if err != nil {
+		writeError(w, err, http.StatusBadRequest)
+		return
+	}
+	var l domain.Location
+	if err := json.NewDecoder(r.Body).Decode(&l); err != nil {
+		writeError(w, err, http.StatusBadRequest)
+		return
+	}
+	l.ID = id
+	if err := h.repo.UpdateLocation(r.Context(), &l); err != nil {
+		writeError(w, err, http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, l)
+}
+
+func (h *ClientHandler) DeleteLocation(w http.ResponseWriter, r *http.Request) {
+	id, err := pathID(r, "id")
+	if err != nil {
+		writeError(w, err, http.StatusBadRequest)
+		return
+	}
+	if err := h.repo.DeleteLocation(r.Context(), id); err != nil {
+		writeError(w, err, http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // --- helpers ---

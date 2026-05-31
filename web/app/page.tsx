@@ -3,6 +3,8 @@ import Link from "next/link";
 export default function Dashboard() {
   const cards = [
     { href: "/clients",      icon: "bi-people",      label: "Clients",      color: "#1a56db" },
+    { href: "/locations",    icon: "bi-geo-alt",     label: "Locations",    color: "#dc2626" },
+    { href: "/subscriptions", icon: "bi-link-45deg", label: "Subscriptions", color: "#f59e0b" },
     { href: "/services",     icon: "bi-grid",        label: "Services",     color: "#0891b2" },
     { href: "/calculations", icon: "bi-calculator",  label: "Calculations", color: "#7c3aed" },
     { href: "/payments",     icon: "bi-credit-card", label: "Payments",     color: "#059669" },
@@ -15,7 +17,7 @@ export default function Dashboard() {
       </div>
       <div className="row g-3">
         {cards.map((c) => (
-          <div key={c.href} className="col-sm-6 col-lg-3">
+          <div key={c.href} className="col-sm-6 col-lg-3 col-xl">
             <Link href={c.href} className="text-decoration-none">
               <div className="bc-card d-flex align-items-center gap-3" style={{ cursor: "pointer" }}>
                 <div

@@ -198,20 +198,33 @@ CREATE TRIGGER trg_calculations_updated_at
 -- -----------------------------------------------------------
 
 CREATE VIEW billcore.v_client_balance AS
+WITH debt AS (
+    SELECT
+        l.client_id,
+        COALESCE(SUM(calc.amount), 0) AS amount
+    FROM billcore.locations l
+    JOIN billcore.subscriptions s ON s.location_id = l.id
+    JOIN billcore.calculations calc ON calc.subscription_id = s.id
+    WHERE calc.status = 'pending'
+    GROUP BY l.client_id
+),
+paid AS (
+    SELECT
+        client_id,
+        COALESCE(SUM(amount), 0) AS amount
+    FROM billcore.payments
+    GROUP BY client_id
+)
 SELECT
-    c.id                                                                        AS client_id,
+    c.id                                             AS client_id,
     c.full_name,
     c.account_number,
-    COALESCE(SUM(calc.amount) FILTER (WHERE calc.status = 'pending'), 0)        AS debt,
-    COALESCE(SUM(p.amount), 0)                                                  AS paid_total,
-    COALESCE(SUM(calc.amount) FILTER (WHERE calc.status = 'pending'), 0)
-        - COALESCE(SUM(p.amount), 0)                                            AS balance
+    COALESCE(debt.amount, 0)                         AS debt,
+    COALESCE(paid.amount, 0)                         AS paid_total,
+    COALESCE(debt.amount, 0) - COALESCE(paid.amount, 0) AS balance
 FROM billcore.clients c
-LEFT JOIN billcore.payments      p    ON p.client_id      = c.id
-LEFT JOIN billcore.locations     l    ON l.client_id      = c.id
-LEFT JOIN billcore.subscriptions s    ON s.location_id    = l.id
-LEFT JOIN billcore.calculations  calc ON calc.subscription_id = s.id
-GROUP BY c.id, c.full_name, c.account_number;
+LEFT JOIN debt ON debt.client_id = c.id
+LEFT JOIN paid ON paid.client_id = c.id;
 
 -- -----------------------------------------------------------
 -- View: latest meter reading per subscription

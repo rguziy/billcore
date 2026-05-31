@@ -22,9 +22,20 @@ func NewReportService(db *pgxpool.Pool) *ReportService {
 func (s *ReportService) GetClientBalance(ctx context.Context, clientID int) (*ClientBalance, error) {
 	var b ClientBalance
 	err := s.db.QueryRow(ctx, `
-		SELECT client_id, debt, paid_total, balance
-		FROM billcore.v_client_balance
-		WHERE client_id = $1
+		WITH debt AS (
+			SELECT COALESCE(SUM(calc.amount), 0) AS amount
+			FROM billcore.calculations calc
+			JOIN billcore.subscriptions sub ON sub.id = calc.subscription_id
+			JOIN billcore.locations loc ON loc.id = sub.location_id
+			WHERE loc.client_id = $1 AND calc.status = 'pending'
+		),
+		paid AS (
+			SELECT COALESCE(SUM(amount), 0) AS amount
+			FROM billcore.payments
+			WHERE client_id = $1
+		)
+		SELECT $1, debt.amount, paid.amount, debt.amount - paid.amount
+		FROM debt, paid
 	`, clientID).Scan(&b.ClientID, &b.Debt, &b.PaidTotal, &b.Balance)
 	if err != nil {
 		return nil, fmt.Errorf("client balance: %w", err)

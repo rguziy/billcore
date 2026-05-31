@@ -29,9 +29,13 @@ export const clientsApi = {
   delete: (id: number) => request<void>(`/clients/${id}`, { method: "DELETE" }),
 
   // Locations
+  listAllLocations: () => request<Location[]>("/locations"),
   listLocations: (clientId: number) => request<Location[]>(`/clients/${clientId}/locations`),
   createLocation: (clientId: number, data: Omit<Location, "id" | "client_id" | "created_at">) =>
     request<Location>(`/clients/${clientId}/locations`, { method: "POST", body: JSON.stringify(data) }),
+  updateLocation: (id: number, data: Partial<Location>) =>
+    request<Location>(`/locations/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteLocation: (id: number) => request<void>(`/locations/${id}`, { method: "DELETE" }),
 
   // Reports
   balance: (clientId: number) => request<ClientBalance>(`/clients/${clientId}/balance`),
@@ -56,6 +60,26 @@ export const servicesApi = {
   listTariffs: (serviceId: number) => request<Tariff[]>(`/services/${serviceId}/tariffs`),
   createTariff: (serviceId: number, data: Omit<Tariff, "id" | "service_id">) =>
     request<Tariff>(`/services/${serviceId}/tariffs`, { method: "POST", body: JSON.stringify(data) }),
+};
+
+// --- Subscriptions ---
+import type { Subscription } from "@/types";
+
+export const subscriptionsApi = {
+  listAll: () => request<Subscription[]>("/subscriptions"),
+  listByLocation: (locationId: number) =>
+    request<Subscription[]>(`/locations/${locationId}/subscriptions`),
+  create: (locationId: number, data: Omit<Subscription, "id" | "location_id">) =>
+    request<Subscription>(`/locations/${locationId}/subscriptions`, {
+      method: "POST", body: JSON.stringify(data),
+    }),
+  update: (id: number, data: Partial<Subscription>) =>
+    request<Subscription>(`/subscriptions/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  disconnect: (id: number, date: string) =>
+    request<void>(`/subscriptions/${id}/disconnect`, {
+      method: "PATCH", body: JSON.stringify({ date }),
+    }),
+  delete: (id: number) => request<void>(`/subscriptions/${id}`, { method: "DELETE" }),
 };
 
 // --- Calculations ---

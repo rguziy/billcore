@@ -17,10 +17,12 @@ type Client struct {
 // Location is a physical object belonging to a client:
 // apartment, cottage, office, etc.
 type Location struct {
-	ID        int       `json:"id"`
-	ClientID  int       `json:"client_id"`
-	Name      string    `json:"name"`
-	Address   string    `json:"address,omitempty"`
-	IsDefault bool      `json:"is_default"`
-	CreatedAt time.Time `json:"created_at"`
+	ID            int       `json:"id"`
+	ClientID      int       `json:"client_id"`
+	Name          string    `json:"name"`
+	Address       string    `json:"address,omitempty"`
+	IsDefault     bool      `json:"is_default"`
+	CreatedAt     time.Time `json:"created_at"`
+	ClientName    string    `json:"client_name,omitempty"`
+	AccountNumber string    `json:"account_number,omitempty"`
 }

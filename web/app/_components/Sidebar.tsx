@@ -6,7 +6,9 @@ import { usePathname } from "next/navigation";
 const nav = [
   { href: "/", label: "Dashboard", icon: "bi-speedometer2" },
   { href: "/clients", label: "Clients", icon: "bi-people" },
+  { href: "/locations", label: "Locations", icon: "bi-geo-alt" },
   { href: "/services", label: "Services", icon: "bi-grid" },
+  { href: "/subscriptions", label: "Subscriptions", icon: "bi-link-45deg" },
   { href: "/calculations", label: "Calculations", icon: "bi-calculator" },
   { href: "/payments", label: "Payments", icon: "bi-credit-card" },
 ];

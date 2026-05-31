@@ -47,24 +47,25 @@ func main() {
 	slog.Info("database connected")
 
 	// Repositories
-	clientRepo := repository.NewClientRepo(pool)
-	serviceRepo := repository.NewServiceRepo(pool)
+	clientRepo       := repository.NewClientRepo(pool)
+	serviceRepo      := repository.NewServiceRepo(pool)
 	subscriptionRepo := repository.NewSubscriptionRepo(pool)
-	calcRepo := repository.NewCalculationRepo(pool)
-	paymentRepo := repository.NewPaymentRepo(pool)
+	calcRepo         := repository.NewCalculationRepo(pool)
+	paymentRepo      := repository.NewPaymentRepo(pool)
 
 	// Services
 	billingSvc := service.NewBillingService(calcRepo, serviceRepo, subscriptionRepo)
-	reportSvc := service.NewReportService(pool)
+	reportSvc  := service.NewReportService(pool)
 
 	// Handlers
-	clientHandler := handler.NewClientHandler(clientRepo)
-	serviceHandler := handler.NewServiceHandler(serviceRepo)
-	calcHandler := handler.NewCalculationHandler(calcRepo, billingSvc, reportSvc)
-	paymentHandler := handler.NewPaymentHandler(paymentRepo)
+	clientHandler       := handler.NewClientHandler(clientRepo)
+	serviceHandler      := handler.NewServiceHandler(serviceRepo)
+	calcHandler         := handler.NewCalculationHandler(calcRepo, billingSvc, reportSvc)
+	paymentHandler      := handler.NewPaymentHandler(paymentRepo)
+	subscriptionHandler := handler.NewSubscriptionHandler(subscriptionRepo)
 
 	// Router
-	router := api.NewRouter(cfg.JWT.Secret, clientHandler, serviceHandler, calcHandler, paymentHandler)
+	router := api.NewRouter(cfg.JWT.Secret, clientHandler, serviceHandler, calcHandler, paymentHandler, subscriptionHandler)
 
 	// HTTP server
 	srv := &http.Server{

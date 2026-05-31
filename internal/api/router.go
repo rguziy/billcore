@@ -10,20 +10,18 @@ import (
 	"github.com/rguziy/billcore/internal/api/middleware"
 )
 
-// NewRouter wires all routes and middleware.
 func NewRouter(
 	jwtSecret string,
 	clients *handler.ClientHandler,
 	services *handler.ServiceHandler,
 	calculations *handler.CalculationHandler,
 	payments *handler.PaymentHandler,
+	subscriptions *handler.SubscriptionHandler,
 ) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(chimw.Recoverer)
 	r.Use(middleware.Logger)
-
-	// CORS — must be before auth
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -35,7 +33,6 @@ func NewRouter(
 		w.Write([]byte(`{"status":"ok"}`))
 	})
 
-	// Skip JWT auth when secret is "dev" (development mode)
 	r.Group(func(r chi.Router) {
 		if jwtSecret != "dev" {
 			r.Use(middleware.Auth(jwtSecret))
@@ -49,8 +46,11 @@ func NewRouter(
 		r.Delete("/clients/{id}", clients.Delete)
 
 		// Locations (nested under client)
+		r.Get("/locations", clients.ListAllLocations)
 		r.Get("/clients/{id}/locations", clients.ListLocations)
 		r.Post("/clients/{id}/locations", clients.CreateLocation)
+		r.Put("/locations/{id}", clients.UpdateLocation)
+		r.Delete("/locations/{id}", clients.DeleteLocation)
 
 		// Reports (nested under client)
 		r.Get("/clients/{id}/balance", calculations.ClientBalance)
@@ -69,7 +69,15 @@ func NewRouter(
 		r.Get("/services/{id}/tariffs", services.ListTariffs)
 		r.Post("/services/{id}/tariffs", services.CreateTariff)
 
-		// Calculations (nested under subscription)
+		// Subscriptions
+		r.Get("/subscriptions", subscriptions.ListAll)
+		r.Get("/locations/{id}/subscriptions", subscriptions.ListByLocation)
+		r.Post("/locations/{id}/subscriptions", subscriptions.Create)
+		r.Put("/subscriptions/{id}", subscriptions.Update)
+		r.Patch("/subscriptions/{id}/disconnect", subscriptions.Disconnect)
+		r.Delete("/subscriptions/{id}", subscriptions.Delete)
+
+		// Calculations
 		r.Get("/subscriptions/{id}/calculations", calculations.ListBySubscription)
 		r.Patch("/calculations/{id}/status", calculations.UpdateStatus)
 	})

@@ -16,6 +16,8 @@ export interface Location {
   address?: string;
   is_default: boolean;
   created_at: string;
+  client_name?: string;
+  account_number?: string;
 }
 
 export interface Service {

@@ -82,6 +82,33 @@ func (r *ClientRepo) Delete(ctx context.Context, id int) error {
 
 // --- Locations ---
 
+func (r *ClientRepo) GetAllLocations(ctx context.Context) ([]domain.Location, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT l.id, l.client_id, l.name, l.address, l.is_default, l.created_at,
+		       c.full_name, c.account_number
+		FROM billcore.locations l
+		JOIN billcore.clients c ON c.id = l.client_id
+		ORDER BY c.full_name, l.is_default DESC, l.name
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("locations get all: %w", err)
+	}
+	defer rows.Close()
+
+	locs := make([]domain.Location, 0)
+	for rows.Next() {
+		var l domain.Location
+		if err := rows.Scan(
+			&l.ID, &l.ClientID, &l.Name, &l.Address, &l.IsDefault, &l.CreatedAt,
+			&l.ClientName, &l.AccountNumber,
+		); err != nil {
+			return nil, fmt.Errorf("locations scan: %w", err)
+		}
+		locs = append(locs, l)
+	}
+	return locs, nil
+}
+
 func (r *ClientRepo) GetLocations(ctx context.Context, clientID int) ([]domain.Location, error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT id, client_id, name, address, is_default, created_at
@@ -112,4 +139,69 @@ func (r *ClientRepo) CreateLocation(ctx context.Context, l *domain.Location) err
 		RETURNING id, created_at
 	`, l.ClientID, l.Name, l.Address, l.IsDefault,
 	).Scan(&l.ID, &l.CreatedAt)
+}
+
+func (r *ClientRepo) UpdateLocation(ctx context.Context, l *domain.Location) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("locations update begin: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	if err := tx.QueryRow(ctx, `
+		SELECT client_id
+		FROM billcore.locations
+		WHERE id = $1
+	`, l.ID).Scan(&l.ClientID); err != nil {
+		return fmt.Errorf("locations get client: %w", err)
+	}
+
+	if l.IsDefault {
+		if _, err := tx.Exec(ctx, `
+			UPDATE billcore.locations
+			SET is_default = FALSE
+			WHERE client_id = $1 AND id <> $2
+		`, l.ClientID, l.ID); err != nil {
+			return fmt.Errorf("locations clear defaults: %w", err)
+		}
+	}
+
+	if err := tx.QueryRow(ctx, `
+		UPDATE billcore.locations
+		SET name = $1, address = $2, is_default = $3
+		WHERE id = $4
+		RETURNING created_at
+	`, l.Name, l.Address, l.IsDefault, l.ID).Scan(&l.CreatedAt); err != nil {
+		return fmt.Errorf("locations update: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("locations update commit: %w", err)
+	}
+	return nil
+}
+
+func (r *ClientRepo) DeleteLocation(ctx context.Context, id int) error {
+	var used bool
+	if err := r.db.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			FROM billcore.subscriptions
+			WHERE location_id = $1
+		)
+	`, id).Scan(&used); err != nil {
+		return fmt.Errorf("locations check usage: %w", err)
+	}
+	if used {
+		return fmt.Errorf("location is used by subscriptions")
+	}
+
+	tag, err := r.db.Exec(ctx, `DELETE FROM billcore.locations WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("locations delete: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("location not found")
+	}
+	return nil
 }
