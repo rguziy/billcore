@@ -30,7 +30,7 @@ func (r *CalculationRepo) GetBySubscription(ctx context.Context, subscriptionID 
 	}
 	defer rows.Close()
 
-	var calcs []domain.Calculation
+	calcs := make([]domain.Calculation, 0)
 	for rows.Next() {
 		var c domain.Calculation
 		if err := rows.Scan(
@@ -61,7 +61,7 @@ func (r *CalculationRepo) GetPending(ctx context.Context, clientID int) ([]domai
 	}
 	defer rows.Close()
 
-	var calcs []domain.Calculation
+	calcs := make([]domain.Calculation, 0)
 	for rows.Next() {
 		var c domain.Calculation
 		if err := rows.Scan(
@@ -111,7 +111,7 @@ func (r *CalculationRepo) GetByPeriod(ctx context.Context, clientID int, period 
 	}
 	defer rows.Close()
 
-	var calcs []domain.Calculation
+	calcs := make([]domain.Calculation, 0)
 	for rows.Next() {
 		var c domain.Calculation
 		if err := rows.Scan(

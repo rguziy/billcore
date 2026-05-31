@@ -1,0 +1,100 @@
+:root {
+  --bc-sidebar-width: 240px;
+  --bc-primary: #1a56db;
+}
+
+body {
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background-color: #f8f9fa;
+}
+
+/* Sidebar */
+.bc-sidebar {
+  width: var(--bc-sidebar-width);
+  min-height: 100vh;
+  background: #0f172a;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.bc-sidebar .brand {
+  color: #f1f5f9;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  padding: 1.5rem 1.25rem 1rem;
+  border-bottom: 1px solid #1e293b;
+}
+
+.bc-sidebar .brand span {
+  color: var(--bc-primary);
+}
+
+.bc-sidebar .nav-link {
+  color: #94a3b8;
+  padding: 0.6rem 1.25rem;
+  border-radius: 6px;
+  margin: 2px 8px;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  transition: all 0.15s;
+}
+
+.bc-sidebar .nav-link:hover,
+.bc-sidebar .nav-link.active {
+  color: #f1f5f9;
+  background: #1e293b;
+}
+
+.bc-sidebar .nav-link i {
+  font-size: 1rem;
+  width: 18px;
+}
+
+/* Cards */
+.bc-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Table */
+.bc-table th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  font-weight: 600;
+  background: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.bc-table td {
+  font-size: 0.875rem;
+  vertical-align: middle;
+  color: #334155;
+}
+
+/* Status badges */
+.badge-pending   { background: #fef3c7; color: #92400e; }
+.badge-paid      { background: #d1fae5; color: #065f46; }
+.badge-cancelled { background: #fee2e2; color: #991b1b; }
+
+/* Page header */
+.bc-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.bc-page-header h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}

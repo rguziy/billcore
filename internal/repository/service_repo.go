@@ -27,7 +27,7 @@ func (r *ServiceRepo) GetAll(ctx context.Context) ([]domain.Service, error) {
 	}
 	defer rows.Close()
 
-	var services []domain.Service
+	services := make([]domain.Service, 0)
 	for rows.Next() {
 		var s domain.Service
 		if err := rows.Scan(&s.ID, &s.Name, &s.Unit, &s.HasMeter); err != nil {
@@ -72,7 +72,7 @@ func (r *ServiceRepo) GetTariffs(ctx context.Context, serviceID int) ([]domain.T
 	}
 	defer rows.Close()
 
-	var tariffs []domain.Tariff
+	tariffs := make([]domain.Tariff, 0)
 	for rows.Next() {
 		var t domain.Tariff
 		if err := rows.Scan(&t.ID, &t.ServiceID, &t.PricePerUnit, &t.ValidFrom, &t.ValidTo, &t.Note); err != nil {

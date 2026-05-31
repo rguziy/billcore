@@ -28,7 +28,7 @@ func (r *PaymentRepo) GetByClient(ctx context.Context, clientID int) ([]domain.P
 	}
 	defer rows.Close()
 
-	var payments []domain.Payment
+	payments := make([]domain.Payment, 0)
 	for rows.Next() {
 		var p domain.Payment
 		if err := rows.Scan(

@@ -28,7 +28,7 @@ func (r *SubscriptionRepo) GetByLocation(ctx context.Context, locationID int) ([
 	}
 	defer rows.Close()
 
-	var subs []domain.Subscription
+	subs := make([]domain.Subscription, 0)
 	for rows.Next() {
 		var s domain.Subscription
 		if err := rows.Scan(

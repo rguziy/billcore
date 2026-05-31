@@ -1,15 +1,59 @@
-# BillCore
+# 🧾 BillCore
 
-Universal billing system for home utility tracking and telecom operators.
+> Universal billing system for home utility tracking and telecom operators.
 
-## Tech stack
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Go](https://img.shields.io/badge/Go-1.22-00ADD8?logo=go)](https://golang.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql)](https://postgresql.org)
+[![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=next.js)](https://nextjs.org)
 
-- **PostgreSQL 16** — database
-- **Go 1.22** — REST API (Chi router)
-- **golang-migrate** — database migrations
-- **pgx/v5** — PostgreSQL driver
+---
 
-## Getting started
+## 🗂️ Project structure
+
+```
+billcore/
+├── cmd/server/              # entry point, graceful shutdown
+├── internal/
+│   ├── config/              # env config
+│   ├── db/                  # pgx pool, migration runner
+│   ├── domain/              # domain structs (no dependencies)
+│   ├── migrations/
+│   │   ├── embed.go         # embeds SQL files into the binary
+│   │   └── sql/             # migration files
+│   ├── repository/          # SQL queries
+│   ├── service/             # business logic
+│   └── api/                 # HTTP router, middleware, handlers
+├── web/                     # Next.js 15 frontend
+│   ├── app/
+│   │   ├── clients/         # clients CRUD + detail view
+│   │   ├── services/        # services + tariffs
+│   │   ├── calculations/    # accruals management
+│   │   ├── payments/        # payment history
+│   │   └── _components/     # shared UI components
+│   ├── lib/api.ts           # typed API client
+│   └── types/index.ts       # domain types
+├── .env.example
+├── docker-compose.yml
+├── Dockerfile
+├── Makefile
+└── README.md
+```
+
+---
+
+## ⚙️ Tech stack
+
+| Layer      | Technology                          |
+|------------|-------------------------------------|
+| Database   | PostgreSQL 16                       |
+| Backend    | Go 1.22, Chi router, pgx/v5         |
+| Migrations | golang-migrate                      |
+| Frontend   | Next.js 15, React 19, Bootstrap 5   |
+
+---
+
+## 🚀 Getting started
 
 ### 1. Clone the repo
 
@@ -69,13 +113,32 @@ Or use an existing PostgreSQL instance — just update `.env` accordingly.
 make migrate-up
 ```
 
-### 6. Start the server
+### 6. Start the API server
 
 ```bash
 make run
 ```
 
-## Migrations
+### 7. Start the frontend
+
+```bash
+cd web
+cp .env.local.example .env.local
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+To run API and frontend simultaneously:
+
+```bash
+make dev
+```
+
+---
+
+## 🗃️ Database migrations
 
 ```bash
 make migrate-up           # apply all pending migrations
@@ -83,7 +146,7 @@ make migrate-down         # rollback last migration
 make migrate-create       # create a new migration (prompts for name)
 ```
 
-### Dirty database state
+### ⚠️ Dirty database state
 
 If a migration fails midway, the database may be left in a dirty state.
 You will see an error like:
@@ -105,10 +168,9 @@ make migrate-force V=1
 make migrate-up
 ```
 
-If you want to wipe the database and start fresh:
+To wipe the database and start fresh:
 
 ```bash
-# connect to psql and drop the schema
 psql "postgres://billcore:secret@localhost:5432/billcore" \
   -c "DROP SCHEMA IF EXISTS billcore CASCADE;"
 
@@ -116,28 +178,28 @@ make migrate-force V=0
 make migrate-up
 ```
 
-## Project structure
+---
 
-```
-billcore/
-├── cmd/server/              # entry point, graceful shutdown
-├── internal/
-│   ├── config/              # env config
-│   ├── db/                  # pgx pool, migration runner
-│   ├── domain/              # domain structs (no dependencies)
-│   ├── migrations/
-│   │   ├── embed.go         # embeds SQL files into the binary
-│   │   └── sql/             # migration files
-│   ├── repository/          # SQL queries
-│   ├── service/             # business logic
-│   └── api/                 # HTTP router, middleware, handlers
-├── .env.example
-├── docker-compose.yml
-├── Dockerfile
-├── Makefile
-└── README.md
-```
+## 🛠️ Makefile reference
 
-## License
+| Command               | Description                          |
+|-----------------------|--------------------------------------|
+| `make run`            | Start the Go API server              |
+| `make build`          | Build binary to `bin/billcore`       |
+| `make test`           | Run all tests                        |
+| `make migrate-up`     | Apply all pending migrations         |
+| `make migrate-down`   | Rollback last migration              |
+| `make migrate-force`  | Force migration version (`V=n`)      |
+| `make migrate-create` | Create new migration file            |
+| `make web-install`    | Install frontend dependencies        |
+| `make web-dev`        | Start Next.js dev server             |
+| `make web-build`      | Build frontend for production        |
+| `make dev`            | Run API + frontend simultaneously    |
+| `make docker-up`      | Start PostgreSQL via Docker Compose  |
+| `make docker-down`    | Stop Docker Compose services         |
 
-MIT
+---
+
+## 📄 License
+
+MIT © 2025 [Ruslan Huzii](https://github.com/rguziy)

@@ -27,7 +27,7 @@ func (r *ClientRepo) GetAll(ctx context.Context) ([]domain.Client, error) {
 	}
 	defer rows.Close()
 
-	var clients []domain.Client
+	clients := make([]domain.Client, 0)
 	for rows.Next() {
 		var c domain.Client
 		if err := rows.Scan(
@@ -94,7 +94,7 @@ func (r *ClientRepo) GetLocations(ctx context.Context, clientID int) ([]domain.L
 	}
 	defer rows.Close()
 
-	var locs []domain.Location
+	locs := make([]domain.Location, 0)
 	for rows.Next() {
 		var l domain.Location
 		if err := rows.Scan(&l.ID, &l.ClientID, &l.Name, &l.Address, &l.IsDefault, &l.CreatedAt); err != nil {

@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/rguziy/billcore/internal/api/handler"
 	"github.com/rguziy/billcore/internal/api/middleware"
 )
@@ -22,13 +23,23 @@ func NewRouter(
 	r.Use(chimw.Recoverer)
 	r.Use(middleware.Logger)
 
+	// CORS — must be before auth
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
+		AllowCredentials: true,
+	}))
+
 	r.Get("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.Write([]byte(`{"status":"ok"}`))
 	})
 
-	// Protected routes
+	// Skip JWT auth when secret is "dev" (development mode)
 	r.Group(func(r chi.Router) {
-		r.Use(middleware.Auth(jwtSecret))
+		if jwtSecret != "dev" {
+			r.Use(middleware.Auth(jwtSecret))
+		}
 
 		// Clients
 		r.Get("/clients", clients.List)
