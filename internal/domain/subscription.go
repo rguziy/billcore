@@ -50,14 +50,3 @@ func (s *Subscription) UnmarshalJSON(data []byte) error {
 
 	return nil
 }
-
-func parseJSONDateTime(value string) (time.Time, error) {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return time.Time{}, fmt.Errorf("date is required")
-	}
-	if t, err := time.Parse(time.DateOnly, value); err == nil {
-		return t, nil
-	}
-	return time.Parse(time.RFC3339, value)
-}

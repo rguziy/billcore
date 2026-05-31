@@ -60,6 +60,9 @@ export const servicesApi = {
   listTariffs: (serviceId: number) => request<Tariff[]>(`/services/${serviceId}/tariffs`),
   createTariff: (serviceId: number, data: Omit<Tariff, "id" | "service_id">) =>
     request<Tariff>(`/services/${serviceId}/tariffs`, { method: "POST", body: JSON.stringify(data) }),
+  updateTariff: (id: number, data: Partial<Tariff>) =>
+    request<Tariff>(`/tariffs/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteTariff: (id: number) => request<void>(`/tariffs/${id}`, { method: "DELETE" }),
 };
 
 // --- Subscriptions ---

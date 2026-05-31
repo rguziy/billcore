@@ -7,6 +7,9 @@ import Modal from "@/app/_components/Modal";
 import Alert from "@/app/_components/Alert";
 
 const emptyService = (): Partial<Service> => ({ name: "", unit: "", has_meter: false });
+const emptyTariff = () => ({ price_per_unit: 0, valid_from: "", valid_to: "", note: "" });
+
+const toDateInput = (value?: string) => value ? value.split("T")[0] : "";
 
 export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
@@ -22,7 +25,9 @@ export default function ServicesPage() {
 
   const [showTariffModal, setShowTariffModal] = useState(false);
   const [tariffServiceId, setTariffServiceId] = useState<number | null>(null);
-  const [tariffForm, setTariffForm] = useState({ price_per_unit: 0, valid_from: "", valid_to: "", note: "" });
+  const [editingTariff, setEditingTariff] = useState<Tariff | null>(null);
+  const [tariffForm, setTariffForm] = useState(emptyTariff());
+  const [deleteTariffId, setDeleteTariffId] = useState<number | null>(null);
 
   const load = async () => {
     try { setServices(await servicesApi.list()); }
@@ -61,22 +66,52 @@ export default function ServicesPage() {
     catch (e: any) { setError(e.message); }
   };
 
-  const openTariff = (serviceId: number) => {
+  const refreshTariffs = async (serviceId: number) => {
+    const t = await servicesApi.listTariffs(serviceId);
+    setTariffs((prev) => ({ ...prev, [serviceId]: t }));
+  };
+
+  const openTariffCreate = (serviceId: number) => {
     setTariffServiceId(serviceId);
-    setTariffForm({ price_per_unit: 0, valid_from: "", valid_to: "", note: "" });
+    setEditingTariff(null);
+    setTariffForm(emptyTariff());
+    setShowTariffModal(true);
+  };
+
+  const openTariffEdit = (tariff: Tariff) => {
+    setTariffServiceId(tariff.service_id);
+    setEditingTariff(tariff);
+    setTariffForm({
+      price_per_unit: tariff.price_per_unit,
+      valid_from: toDateInput(tariff.valid_from),
+      valid_to: toDateInput(tariff.valid_to),
+      note: tariff.note ?? "",
+    });
     setShowTariffModal(true);
   };
 
   const saveTariff = async () => {
     if (!tariffServiceId) return;
     try {
-      await servicesApi.createTariff(tariffServiceId, {
+      const payload = {
         ...tariffForm,
         valid_to: tariffForm.valid_to || undefined,
-      } as any);
-      const t = await servicesApi.listTariffs(tariffServiceId);
-      setTariffs((prev) => ({ ...prev, [tariffServiceId]: t }));
+      } as any;
+      if (editingTariff) await servicesApi.updateTariff(editingTariff.id, payload);
+      else await servicesApi.createTariff(tariffServiceId, payload);
+      await refreshTariffs(tariffServiceId);
+      setEditingTariff(null);
       setShowTariffModal(false);
+    } catch (e: any) { setError(e.message); }
+  };
+
+  const confirmTariffDelete = async () => {
+    if (!deleteTariffId) return;
+    const tariff = Object.values(tariffs).flat().find((t) => t.id === deleteTariffId);
+    try {
+      await servicesApi.deleteTariff(deleteTariffId);
+      setDeleteTariffId(null);
+      if (tariff) await refreshTariffs(tariff.service_id);
     } catch (e: any) { setError(e.message); }
   };
 
@@ -135,7 +170,7 @@ export default function ServicesPage() {
                       <td colSpan={4} className="px-4 py-3">
                         <div className="d-flex justify-content-between align-items-center mb-2">
                           <strong style={{ fontSize: "0.85rem" }}>Tariffs</strong>
-                          <button className="btn btn-xs btn-outline-primary btn-sm" onClick={() => openTariff(s.id)}>
+                          <button className="btn btn-xs btn-outline-primary btn-sm" onClick={() => openTariffCreate(s.id)}>
                             <i className="bi bi-plus-lg me-1" /> Add tariff
                           </button>
                         </div>
@@ -149,6 +184,7 @@ export default function ServicesPage() {
                                 <th>Valid from</th>
                                 <th>Valid to</th>
                                 <th>Note</th>
+                                <th></th>
                               </tr>
                             </thead>
                             <tbody>
@@ -158,6 +194,16 @@ export default function ServicesPage() {
                                   <td>{new Date(t.valid_from).toLocaleDateString()}</td>
                                   <td>{t.valid_to ? new Date(t.valid_to).toLocaleDateString() : <span className="badge badge-paid">Active</span>}</td>
                                   <td>{t.note || "—"}</td>
+                                  <td className="text-end">
+                                    <button className="btn btn-sm btn-outline-secondary me-1" title="Edit"
+                                      onClick={() => openTariffEdit(t)}>
+                                      <i className="bi bi-pencil" />
+                                    </button>
+                                    <button className="btn btn-sm btn-outline-danger" title="Delete"
+                                      onClick={() => setDeleteTariffId(t.id)}>
+                                      <i className="bi bi-trash" />
+                                    </button>
+                                  </td>
                                 </tr>
                               ))}
                             </tbody>
@@ -196,7 +242,13 @@ export default function ServicesPage() {
       </Modal>
 
       {/* Tariff modal */}
-      <Modal title="Add Tariff" show={showTariffModal} onClose={() => setShowTariffModal(false)} onConfirm={saveTariff}>
+      <Modal
+        title={editingTariff ? "Edit Tariff" : "Add Tariff"}
+        show={showTariffModal}
+        onClose={() => { setShowTariffModal(false); setEditingTariff(null); }}
+        onConfirm={saveTariff}
+        confirmLabel={editingTariff ? "Save" : "Create"}
+      >
         <div className="mb-3">
           <label className="form-label">Price per unit *</label>
           <input className="form-control" type="number" step="0.0001" value={tariffForm.price_per_unit}
@@ -217,6 +269,13 @@ export default function ServicesPage() {
           <input className="form-control" value={tariffForm.note}
             onChange={(e) => setTariffForm({ ...tariffForm, note: e.target.value })} />
         </div>
+      </Modal>
+
+      {/* Delete tariff confirm */}
+      <Modal title="Delete Tariff" show={deleteTariffId !== null}
+        onClose={() => setDeleteTariffId(null)} onConfirm={confirmTariffDelete}
+        confirmLabel="Delete" confirmVariant="danger">
+        Delete this tariff only if it is not used by calculations.
       </Modal>
     </>
   );

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/rguziy/billcore/internal/domain"
@@ -96,6 +97,10 @@ func (h *ServiceHandler) CreateTariff(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err, http.StatusBadRequest)
 		return
 	}
+	if t.ValidFrom.IsZero() {
+		writeError(w, fmt.Errorf("valid_from is required"), http.StatusBadRequest)
+		return
+	}
 	t.ServiceID = id
 	if err := h.repo.CreateTariff(r.Context(), &t); err != nil {
 		writeError(w, err, http.StatusInternalServerError)
@@ -103,4 +108,40 @@ func (h *ServiceHandler) CreateTariff(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusCreated)
 	writeJSON(w, t)
+}
+
+func (h *ServiceHandler) UpdateTariff(w http.ResponseWriter, r *http.Request) {
+	id, err := pathID(r, "id")
+	if err != nil {
+		writeError(w, err, http.StatusBadRequest)
+		return
+	}
+	var t domain.Tariff
+	if err := json.NewDecoder(r.Body).Decode(&t); err != nil {
+		writeError(w, err, http.StatusBadRequest)
+		return
+	}
+	if t.ValidFrom.IsZero() {
+		writeError(w, fmt.Errorf("valid_from is required"), http.StatusBadRequest)
+		return
+	}
+	t.ID = id
+	if err := h.repo.UpdateTariff(r.Context(), &t); err != nil {
+		writeError(w, err, http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, t)
+}
+
+func (h *ServiceHandler) DeleteTariff(w http.ResponseWriter, r *http.Request) {
+	id, err := pathID(r, "id")
+	if err != nil {
+		writeError(w, err, http.StatusBadRequest)
+		return
+	}
+	if err := h.repo.DeleteTariff(r.Context(), id); err != nil {
+		writeError(w, err, http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

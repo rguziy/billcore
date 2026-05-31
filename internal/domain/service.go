@@ -1,6 +1,11 @@
 package domain
 
-import "time"
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+	"time"
+)
 
 // Service is a catalogue entry: cold water, electricity, internet, etc.
 type Service struct {
@@ -19,4 +24,36 @@ type Tariff struct {
 	ValidFrom    time.Time  `json:"valid_from"`
 	ValidTo      *time.Time `json:"valid_to,omitempty"`
 	Note         string     `json:"note,omitempty"`
+}
+
+func (t *Tariff) UnmarshalJSON(data []byte) error {
+	type Alias Tariff
+	var raw struct {
+		*Alias
+		ValidFrom *string `json:"valid_from"`
+		ValidTo   *string `json:"valid_to"`
+	}
+	raw.Alias = (*Alias)(t)
+
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	if raw.ValidFrom != nil {
+		validFrom, err := parseJSONDateTime(*raw.ValidFrom)
+		if err != nil {
+			return fmt.Errorf("valid_from: %w", err)
+		}
+		t.ValidFrom = validFrom
+	}
+
+	if raw.ValidTo != nil && strings.TrimSpace(*raw.ValidTo) != "" {
+		validTo, err := parseJSONDateTime(*raw.ValidTo)
+		if err != nil {
+			return fmt.Errorf("valid_to: %w", err)
+		}
+		t.ValidTo = &validTo
+	}
+
+	return nil
 }

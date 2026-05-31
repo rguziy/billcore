@@ -103,3 +103,29 @@ func (r *ServiceRepo) CreateTariff(ctx context.Context, t *domain.Tariff) error 
 		RETURNING id
 	`, t.ServiceID, t.PricePerUnit, t.ValidFrom, t.ValidTo, t.Note).Scan(&t.ID)
 }
+
+func (r *ServiceRepo) UpdateTariff(ctx context.Context, t *domain.Tariff) error {
+	tag, err := r.db.Exec(ctx, `
+		UPDATE billcore.tariffs
+		SET price_per_unit = $1, valid_from = $2, valid_to = $3, note = $4
+		WHERE id = $5
+	`, t.PricePerUnit, t.ValidFrom, t.ValidTo, t.Note, t.ID)
+	if err != nil {
+		return fmt.Errorf("tariffs update: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("tariff not found")
+	}
+	return nil
+}
+
+func (r *ServiceRepo) DeleteTariff(ctx context.Context, id int) error {
+	tag, err := r.db.Exec(ctx, `DELETE FROM billcore.tariffs WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("tariffs delete: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("tariff not found")
+	}
+	return nil
+}

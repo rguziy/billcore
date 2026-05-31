@@ -68,6 +68,8 @@ func NewRouter(
 		// Tariffs (nested under service)
 		r.Get("/services/{id}/tariffs", services.ListTariffs)
 		r.Post("/services/{id}/tariffs", services.CreateTariff)
+		r.Put("/tariffs/{id}", services.UpdateTariff)
+		r.Delete("/tariffs/{id}", services.DeleteTariff)
 
 		// Subscriptions
 		r.Get("/subscriptions", subscriptions.ListAll)
