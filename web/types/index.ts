@@ -85,8 +85,14 @@ export interface Payment {
   note?: string;
 }
 
+export interface CalculationRow extends Calculation {
+  service_name: string;
+  unit: string;
+  location_name: string;
+  has_meter: boolean;
+}
+
 export interface ClientBalance {
-  client_id: number;
   debt: number;
   paid_total: number;
   balance: number;

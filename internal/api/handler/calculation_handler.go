@@ -22,7 +22,7 @@ func NewCalculationHandler(
 	return &CalculationHandler{repo: repo, reportService: report}
 }
 
-// GetByPeriod returns all calculations for a period, optionally filtered by client.
+// GetByPeriod returns enriched calculations (with service name) for a period.
 // GET /periods/{id}/calculations?client_id=5
 func (h *CalculationHandler) GetByPeriod(w http.ResponseWriter, r *http.Request) {
 	periodID, err := pathID(r, "id")
@@ -31,28 +31,22 @@ func (h *CalculationHandler) GetByPeriod(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	clientIDStr := r.URL.Query().Get("client_id")
-	if clientIDStr != "" {
-		clientID := 0
-		if _, err := fmt.Sscan(clientIDStr, &clientID); err != nil {
+	var clientID *int
+	if s := r.URL.Query().Get("client_id"); s != "" {
+		var id int
+		if _, err := fmt.Sscan(s, &id); err != nil {
 			writeError(w, err, http.StatusBadRequest)
 			return
 		}
-		calcs, err := h.repo.GetByPeriodAndClient(r.Context(), periodID, clientID)
-		if err != nil {
-			writeError(w, err, http.StatusInternalServerError)
-			return
-		}
-		writeJSON(w, calcs)
-		return
+		clientID = &id
 	}
 
-	calcs, err := h.repo.GetByPeriod(r.Context(), periodID)
+	rows, err := h.repo.GetRowsByPeriod(r.Context(), periodID, clientID)
 	if err != nil {
 		writeError(w, err, http.StatusInternalServerError)
 		return
 	}
-	writeJSON(w, calcs)
+	writeJSON(w, rows)
 }
 
 func (h *CalculationHandler) ListBySubscription(w http.ResponseWriter, r *http.Request) {
@@ -75,16 +69,17 @@ func (h *CalculationHandler) ListPending(w http.ResponseWriter, r *http.Request)
 		writeError(w, err, http.StatusBadRequest)
 		return
 	}
-	calcs, err := h.repo.GetPending(r.Context(), clientID)
+	rows, err := h.repo.GetPendingRows(r.Context(), clientID)
 	if err != nil {
 		writeError(w, err, http.StatusInternalServerError)
 		return
 	}
-	writeJSON(w, calcs)
+	writeJSON(w, rows)
 }
 
-// UpdateReading updates reading_curr and recalculates amount.
-// PATCH /calculations/{id}/reading  body: { "reading_curr": 608 }
+// UpdateReading updates reading_prev (optional) and reading_curr, recalculates amount.
+// PATCH /calculations/{id}/reading
+// Body: { "reading_prev": 600, "reading_curr": 608 }
 func (h *CalculationHandler) UpdateReading(w http.ResponseWriter, r *http.Request) {
 	id, err := pathID(r, "id")
 	if err != nil {
@@ -92,13 +87,14 @@ func (h *CalculationHandler) UpdateReading(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	var body struct {
-		ReadingCurr float64 `json:"reading_curr"`
+		ReadingPrev *float64 `json:"reading_prev"`
+		ReadingCurr float64  `json:"reading_curr"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, err, http.StatusBadRequest)
 		return
 	}
-	if err := h.repo.UpdateReading(r.Context(), id, body.ReadingCurr); err != nil {
+	if err := h.repo.UpdateReading(r.Context(), id, body.ReadingPrev, body.ReadingCurr); err != nil {
 		writeError(w, err, http.StatusBadRequest)
 		return
 	}

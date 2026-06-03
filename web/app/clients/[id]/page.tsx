@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { clientsApi, subscriptionsApi, servicesApi } from "@/lib/api";
-import type { Client, Location, ClientBalance, Calculation, Payment, Subscription, Service } from "@/types";
+import type { Client, Location, ClientBalance, CalculationRow, Payment, Subscription, Service } from "@/types";
 import Modal from "@/app/_components/Modal";
 import Alert from "@/app/_components/Alert";
 import Link from "next/link";
@@ -17,7 +17,7 @@ export default function ClientDetailPage() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [balance, setBalance] = useState<ClientBalance | null>(null);
-  const [pending, setPending] = useState<Calculation[]>([]);
+  const [pending, setPending] = useState<CalculationRow[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -288,8 +288,11 @@ export default function ClientDetailPage() {
         <table className="table bc-table mb-0">
           <thead>
             <tr>
+              <th>Service</th>
+              <th>Location</th>
               <th>Period</th>
-              <th>Quantity</th>
+              <th>Prev</th>
+              <th>Curr</th>
               <th>Amount</th>
               <th>Note</th>
               <th>Status</th>
@@ -297,12 +300,23 @@ export default function ClientDetailPage() {
           </thead>
           <tbody>
             {pending.length === 0 && (
-              <tr><td colSpan={5} className="text-center text-muted p-3">No pending calculations</td></tr>
+              <tr><td colSpan={8} className="text-center text-muted p-3">No pending calculations</td></tr>
             )}
             {pending.map((c) => (
               <tr key={c.id}>
-                <td>{new Date(c.period_start).toLocaleDateString("en-US", { year: "numeric", month: "long" })}</td>
-                <td>{c.quantity} {c.note}</td>
+                <td className="fw-semibold">
+                  {c.service_name}
+                  <span className="text-muted ms-1" style={{ fontSize: "0.75rem" }}>({c.unit})</span>
+                </td>
+                <td style={{ fontSize: "0.85rem", color: "#64748b" }}>{c.location_name}</td>
+                <td>
+                  <Link href={`/calculations?period_id=${c.period_id}&client_id=${clientId}`}
+                    className="text-decoration-none" style={{ fontSize: "0.85rem" }}>
+                    #{c.period_id}
+                  </Link>
+                </td>
+                <td>{c.reading_prev ?? "—"}</td>
+                <td>{c.reading_curr != null ? c.reading_curr : c.has_meter ? <span className="text-warning">—</span> : "—"}</td>
                 <td><strong>{c.amount.toFixed(2)}</strong></td>
                 <td>{c.note || "—"}</td>
                 <td><span className={`badge badge-${c.status}`}>{c.status}</span></td>

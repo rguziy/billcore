@@ -39,7 +39,7 @@ export const clientsApi = {
   deleteLocation: (id: number) => request<void>(`/locations/${id}`, { method: "DELETE" }),
 
   balance: (clientId: number) => request<ClientBalance>(`/clients/${clientId}/balance`),
-  pending: (clientId: number) => request<Calculation[]>(`/clients/${clientId}/pending`),
+  pending: (clientId: number) => request<CalculationRow[]>(`/clients/${clientId}/pending`),
   payments: (clientId: number) => request<Payment[]>(`/clients/${clientId}/payments`),
   createPayment: (clientId: number, data: Omit<Payment, "id" | "client_id" | "paid_at">) =>
     request<Payment>(`/clients/${clientId}/payments`, { method: "POST", body: JSON.stringify(data) }),
@@ -94,7 +94,7 @@ export const periodsApi = {
 
   getCalculations: (periodId: number, clientId?: number) => {
     const qs = clientId ? `?client_id=${clientId}` : "";
-    return request<Calculation[]>(`/periods/${periodId}/calculations${qs}`);
+    return request<CalculationRow[]>(`/periods/${periodId}/calculations${qs}`);
   },
 };
 
@@ -102,9 +102,10 @@ export const periodsApi = {
 export const calculationsApi = {
   listBySubscription: (subscriptionId: number) =>
     request<Calculation[]>(`/subscriptions/${subscriptionId}/calculations`),
-  updateReading: (id: number, readingCurr: number) =>
+  updateReading: (id: number, readingCurr: number, readingPrev?: number) =>
     request<void>(`/calculations/${id}/reading`, {
-      method: "PATCH", body: JSON.stringify({ reading_curr: readingCurr }),
+      method: "PATCH",
+      body: JSON.stringify({ reading_curr: readingCurr, reading_prev: readingPrev ?? null }),
     }),
   updateStatus: (id: number, status: string) =>
     request<void>(`/calculations/${id}/status`, {

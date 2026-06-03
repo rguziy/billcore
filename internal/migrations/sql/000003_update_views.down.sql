@@ -1,7 +1,9 @@
 BEGIN;
 
--- Restore original views (period_start on calculations)
-CREATE OR REPLACE VIEW billcore.v_client_balance AS
+DROP VIEW IF EXISTS billcore.v_latest_readings;
+DROP VIEW IF EXISTS billcore.v_client_balance;
+
+CREATE VIEW billcore.v_client_balance AS
 SELECT
     c.id                                                                        AS client_id,
     c.full_name,
@@ -17,7 +19,7 @@ LEFT JOIN billcore.subscriptions s    ON s.location_id    = l.id
 LEFT JOIN billcore.calculations  calc ON calc.subscription_id = s.id
 GROUP BY c.id, c.full_name, c.account_number;
 
-CREATE OR REPLACE VIEW billcore.v_latest_readings AS
+CREATE VIEW billcore.v_latest_readings AS
 SELECT DISTINCT ON (subscription_id)
     s.id            AS subscription_id,
     s.meter_number,

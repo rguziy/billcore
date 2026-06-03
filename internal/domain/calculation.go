@@ -48,3 +48,12 @@ type Payment struct {
 	PaidAt        time.Time     `json:"paid_at"`
 	Note          string        `json:"note,omitempty"`
 }
+
+// CalculationRow is an enriched calculation with service info for display.
+type CalculationRow struct {
+	Calculation
+	ServiceName  string `json:"service_name"`
+	Unit         string `json:"unit"`
+	LocationName string `json:"location_name"`
+	HasMeter     bool   `json:"has_meter"`
+}

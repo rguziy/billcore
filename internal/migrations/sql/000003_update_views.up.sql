@@ -1,9 +1,10 @@
 BEGIN;
 
--- Update v_client_balance: calculations no longer have period_start
+-- Drop existing views first to avoid ownership issues
 DROP VIEW IF EXISTS billcore.v_latest_readings;
 DROP VIEW IF EXISTS billcore.v_client_balance;
 
+-- Recreate v_client_balance
 CREATE VIEW billcore.v_client_balance AS
 SELECT
     c.id                                                                        AS client_id,
@@ -20,7 +21,7 @@ LEFT JOIN billcore.subscriptions s    ON s.location_id    = l.id
 LEFT JOIN billcore.calculations  calc ON calc.subscription_id = s.id
 GROUP BY c.id, c.full_name, c.account_number;
 
--- Update v_latest_readings: join periods to get period_start
+-- Recreate v_latest_readings
 CREATE VIEW billcore.v_latest_readings AS
 SELECT DISTINCT ON (c.subscription_id)
     s.id            AS subscription_id,

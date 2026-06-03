@@ -31,6 +31,52 @@ func (r *CalculationRepo) GetByPeriod(ctx context.Context, periodID int) ([]doma
 	return scanCalculations(rows)
 }
 
+func (r *CalculationRepo) GetRowsByPeriod(ctx context.Context, periodID int, clientID *int) ([]domain.CalculationRow, error) {
+	query := `
+		SELECT c.id, c.subscription_id, c.period_id, c.tariff_id,
+		       c.reading_prev, c.reading_curr, c.quantity, c.amount,
+		       c.status, c.note, c.created_at, c.updated_at,
+		       sv.name AS service_name, sv.unit, l.name AS location_name,
+		       sv.has_meter
+		FROM billcore.calculations c
+		JOIN billcore.subscriptions s  ON s.id  = c.subscription_id
+		JOIN billcore.services      sv ON sv.id = s.service_id
+		JOIN billcore.locations     l  ON l.id  = s.location_id
+		WHERE c.period_id = $1
+	`
+	args := []any{periodID}
+	if clientID != nil {
+		query += ` AND l.client_id = $2`
+		args = append(args, *clientID)
+	}
+	query += ` ORDER BY sv.name, l.name`
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("calculation rows by period: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]domain.CalculationRow, 0)
+	for rows.Next() {
+		var cr domain.CalculationRow
+		var note *string
+		if err := rows.Scan(
+			&cr.ID, &cr.SubscriptionID, &cr.PeriodID, &cr.TariffID,
+			&cr.ReadingPrev, &cr.ReadingCurr, &cr.Quantity, &cr.Amount,
+			&cr.Status, &note, &cr.CreatedAt, &cr.UpdatedAt,
+			&cr.ServiceName, &cr.Unit, &cr.LocationName, &cr.HasMeter,
+		); err != nil {
+			return nil, fmt.Errorf("calculation row scan: %w", err)
+		}
+		if note != nil {
+			cr.Note = *note
+		}
+		result = append(result, cr)
+	}
+	return result, nil
+}
+
 func (r *CalculationRepo) GetByPeriodAndClient(ctx context.Context, periodID, clientID int) ([]domain.Calculation, error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT c.id, c.subscription_id, c.period_id, c.tariff_id,
@@ -82,6 +128,44 @@ func (r *CalculationRepo) GetPending(ctx context.Context, clientID int) ([]domai
 	return scanCalculations(rows)
 }
 
+func (r *CalculationRepo) GetPendingRows(ctx context.Context, clientID int) ([]domain.CalculationRow, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT c.id, c.subscription_id, c.period_id, c.tariff_id,
+		       c.reading_prev, c.reading_curr, c.quantity, c.amount,
+		       c.status, c.note, c.created_at, c.updated_at,
+		       sv.name, sv.unit, l.name AS location_name, sv.has_meter
+		FROM billcore.calculations c
+		JOIN billcore.subscriptions s  ON s.id  = c.subscription_id
+		JOIN billcore.services      sv ON sv.id = s.service_id
+		JOIN billcore.locations     l  ON l.id  = s.location_id
+		WHERE l.client_id = $1 AND c.status = 'pending'
+		ORDER BY sv.name
+	`, clientID)
+	if err != nil {
+		return nil, fmt.Errorf("pending rows: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]domain.CalculationRow, 0)
+	for rows.Next() {
+		var cr domain.CalculationRow
+		var note *string
+		if err := rows.Scan(
+			&cr.ID, &cr.SubscriptionID, &cr.PeriodID, &cr.TariffID,
+			&cr.ReadingPrev, &cr.ReadingCurr, &cr.Quantity, &cr.Amount,
+			&cr.Status, &note, &cr.CreatedAt, &cr.UpdatedAt,
+			&cr.ServiceName, &cr.Unit, &cr.LocationName, &cr.HasMeter,
+		); err != nil {
+			return nil, fmt.Errorf("pending rows scan: %w", err)
+		}
+		if note != nil {
+			cr.Note = *note
+		}
+		result = append(result, cr)
+	}
+	return result, nil
+}
+
 func (r *CalculationRepo) Create(ctx context.Context, c *domain.Calculation) error {
 	return r.db.QueryRow(ctx, `
 		INSERT INTO billcore.calculations
@@ -93,25 +177,26 @@ func (r *CalculationRepo) Create(ctx context.Context, c *domain.Calculation) err
 	).Scan(&c.ID, &c.CreatedAt, &c.UpdatedAt)
 }
 
-// UpdateReading updates reading_curr, recalculates quantity and amount.
+// UpdateReading updates reading_curr and reading_prev (if provided), recalculates quantity and amount.
 // Only allowed when the period is open.
-func (r *CalculationRepo) UpdateReading(ctx context.Context, id int, readingCurr float64) error {
+func (r *CalculationRepo) UpdateReading(ctx context.Context, id int, readingPrev *float64, readingCurr float64) error {
 	tag, err := r.db.Exec(ctx, `
 		UPDATE billcore.calculations c
 		SET
-			reading_curr = $1,
-			quantity     = GREATEST(0, $1 - COALESCE(reading_prev, 0)),
+			reading_prev = COALESCE($1, reading_prev),
+			reading_curr = $2,
+			quantity     = GREATEST(0, $2 - COALESCE($1, reading_prev, 0)),
 			amount       = ROUND(
-				GREATEST(0, $1 - COALESCE(reading_prev, 0)) *
+				GREATEST(0, $2 - COALESCE($1, reading_prev, 0)) *
 				(SELECT price_per_unit FROM billcore.tariffs WHERE id = c.tariff_id)::NUMERIC,
 				2
 			),
 			updated_at   = NOW()
 		FROM billcore.periods p
-		WHERE c.id = $2
+		WHERE c.id = $3
 		  AND p.id = c.period_id
 		  AND p.status = 'open'
-	`, readingCurr, id)
+	`, readingPrev, readingCurr, id)
 	if err != nil {
 		return fmt.Errorf("update reading: %w", err)
 	}
