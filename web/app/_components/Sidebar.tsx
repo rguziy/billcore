@@ -4,13 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const nav = [
-  { href: "/", label: "Dashboard", icon: "bi-speedometer2" },
-  { href: "/clients", label: "Clients", icon: "bi-people" },
-  { href: "/locations", label: "Locations", icon: "bi-geo-alt" },
-  { href: "/services", label: "Services", icon: "bi-grid" },
-  { href: "/subscriptions", label: "Subscriptions", icon: "bi-link-45deg" },
-  { href: "/calculations", label: "Calculations", icon: "bi-calculator" },
-  { href: "/payments", label: "Payments", icon: "bi-credit-card" },
+  { href: "/",              label: "Dashboard",    icon: "bi-speedometer2" },
+  { href: "/clients",       label: "Clients",      icon: "bi-people" },
+  { href: "/locations",     label: "Locations",    icon: "bi-geo-alt" },
+  { href: "/services",      label: "Services",     icon: "bi-grid" },
+  { href: "/subscriptions", label: "Subscriptions",icon: "bi-link-45deg" },
+  { href: "/periods",       label: "Periods",      icon: "bi-calendar3" },
+  { href: "/calculations",  label: "Calculations", icon: "bi-calculator" },
+  { href: "/payments",      label: "Payments",     icon: "bi-credit-card" },
 ];
 
 export default function Sidebar() {
@@ -32,7 +33,7 @@ export default function Sidebar() {
         ))}
       </ul>
       <div className="px-3 pb-3" style={{ fontSize: "0.75rem", color: "#475569" }}>
-        v0.1.0
+        v0.2.0
       </div>
     </nav>
   );

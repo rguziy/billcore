@@ -46,13 +46,23 @@ export interface Subscription {
   note?: string;
 }
 
+export type PeriodStatus = "open" | "closed";
+
+export interface Period {
+  id: number;
+  period_start: string;
+  period_end: string;
+  status: PeriodStatus;
+  created_at: string;
+}
+
 export type CalculationStatus = "pending" | "paid" | "cancelled";
 
 export interface Calculation {
   id: number;
   subscription_id: number;
+  period_id: number;
   tariff_id: number;
-  period_start: string;
   reading_prev?: number;
   reading_curr?: number;
   quantity: number;
@@ -80,4 +90,9 @@ export interface ClientBalance {
   debt: number;
   paid_total: number;
   balance: number;
+}
+
+export interface OpenPeriodResponse {
+  period: Period;
+  generated: number;
 }

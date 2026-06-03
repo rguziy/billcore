@@ -17,6 +17,7 @@ func NewRouter(
 	calculations *handler.CalculationHandler,
 	payments *handler.PaymentHandler,
 	subscriptions *handler.SubscriptionHandler,
+	periods *handler.PeriodHandler,
 ) *chi.Mux {
 	r := chi.NewRouter()
 
@@ -45,14 +46,14 @@ func NewRouter(
 		r.Put("/clients/{id}", clients.Update)
 		r.Delete("/clients/{id}", clients.Delete)
 
-		// Locations (nested under client)
+		// Locations
 		r.Get("/locations", clients.ListAllLocations)
 		r.Get("/clients/{id}/locations", clients.ListLocations)
 		r.Post("/clients/{id}/locations", clients.CreateLocation)
 		r.Put("/locations/{id}", clients.UpdateLocation)
 		r.Delete("/locations/{id}", clients.DeleteLocation)
 
-		// Reports (nested under client)
+		// Client reports
 		r.Get("/clients/{id}/balance", calculations.ClientBalance)
 		r.Get("/clients/{id}/readings", calculations.LatestReadings)
 		r.Get("/clients/{id}/pending", calculations.ListPending)
@@ -65,7 +66,7 @@ func NewRouter(
 		r.Put("/services/{id}", services.Update)
 		r.Delete("/services/{id}", services.Delete)
 
-		// Tariffs (nested under service)
+		// Tariffs
 		r.Get("/services/{id}/tariffs", services.ListTariffs)
 		r.Post("/services/{id}/tariffs", services.CreateTariff)
 		r.Put("/tariffs/{id}", services.UpdateTariff)
@@ -78,10 +79,21 @@ func NewRouter(
 		r.Put("/subscriptions/{id}", subscriptions.Update)
 		r.Patch("/subscriptions/{id}/disconnect", subscriptions.Disconnect)
 		r.Delete("/subscriptions/{id}", subscriptions.Delete)
-
-		// Calculations
 		r.Get("/subscriptions/{id}/calculations", calculations.ListBySubscription)
+
+		// Periods
+		r.Get("/periods", periods.List)
+		r.Get("/periods/{id}", periods.Get)
+		r.Post("/periods/open", periods.Open)
+		r.Patch("/periods/{id}/close", periods.Close)
+		r.Patch("/periods/{id}/reopen", periods.Reopen)
+		r.Delete("/periods/{id}", periods.Delete)
+
+		// Calculations (period-scoped)
+		r.Get("/periods/{id}/calculations", calculations.GetByPeriod)
+		r.Patch("/calculations/{id}/reading", calculations.UpdateReading)
 		r.Patch("/calculations/{id}/status", calculations.UpdateStatus)
+		r.Patch("/calculations/{id}/note", calculations.UpdateNote)
 	})
 
 	return r

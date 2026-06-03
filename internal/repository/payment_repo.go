@@ -31,11 +31,15 @@ func (r *PaymentRepo) GetByClient(ctx context.Context, clientID int) ([]domain.P
 	payments := make([]domain.Payment, 0)
 	for rows.Next() {
 		var p domain.Payment
+		var note *string
 		if err := rows.Scan(
 			&p.ID, &p.ClientID, &p.CalculationID,
-			&p.Amount, &p.Method, &p.PaidAt, &p.Note,
+			&p.Amount, &p.Method, &p.PaidAt, &note,
 		); err != nil {
 			return nil, fmt.Errorf("payments scan: %w", err)
+		}
+		if note != nil {
+			p.Note = *note
 		}
 		payments = append(payments, p)
 	}

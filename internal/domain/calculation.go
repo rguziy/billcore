@@ -11,13 +11,13 @@ const (
 	StatusCancelled CalculationStatus = "cancelled"
 )
 
-// Calculation is a monthly accrual for a subscription.
+// Calculation is a monthly accrual for a subscription within a period.
 type Calculation struct {
 	ID             int               `json:"id"`
 	SubscriptionID int               `json:"subscription_id"`
+	PeriodID       int               `json:"period_id"`
 	TariffID       int               `json:"tariff_id"`
-	PeriodStart    time.Time         `json:"period_start"`
-	ReadingPrev    *float64          `json:"reading_prev,omitempty"` // nil when has_meter = false
+	ReadingPrev    *float64          `json:"reading_prev,omitempty"`
 	ReadingCurr    *float64          `json:"reading_curr,omitempty"`
 	Quantity       float64           `json:"quantity"`
 	Amount         float64           `json:"amount"`

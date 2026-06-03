@@ -31,11 +31,18 @@ func (r *SubscriptionRepo) GetByLocation(ctx context.Context, locationID int) ([
 	subs := make([]domain.Subscription, 0)
 	for rows.Next() {
 		var s domain.Subscription
+		var meterNumber, note *string
 		if err := rows.Scan(
 			&s.ID, &s.LocationID, &s.ServiceID,
-			&s.MeterNumber, &s.ConnectedAt, &s.DisconnectedAt, &s.Note,
+			&meterNumber, &s.ConnectedAt, &s.DisconnectedAt, &note,
 		); err != nil {
 			return nil, fmt.Errorf("subscriptions scan: %w", err)
+		}
+		if meterNumber != nil {
+			s.MeterNumber = *meterNumber
+		}
+		if note != nil {
+			s.Note = *note
 		}
 		subs = append(subs, s)
 	}
@@ -72,11 +79,18 @@ func (r *SubscriptionRepo) GetAll(ctx context.Context) ([]domain.Subscription, e
 	subs := make([]domain.Subscription, 0)
 	for rows.Next() {
 		var s domain.Subscription
+		var meterNumber, note *string
 		if err := rows.Scan(
 			&s.ID, &s.LocationID, &s.ServiceID,
-			&s.MeterNumber, &s.ConnectedAt, &s.DisconnectedAt, &s.Note,
+			&meterNumber, &s.ConnectedAt, &s.DisconnectedAt, &note,
 		); err != nil {
 			return nil, fmt.Errorf("subscriptions scan: %w", err)
+		}
+		if meterNumber != nil {
+			s.MeterNumber = *meterNumber
+		}
+		if note != nil {
+			s.Note = *note
 		}
 		subs = append(subs, s)
 	}
