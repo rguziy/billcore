@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 
 	"github.com/rguziy/billcore/internal/domain"
@@ -20,6 +21,85 @@ func NewCalculationHandler(
 	report *service.ReportService,
 ) *CalculationHandler {
 	return &CalculationHandler{repo: repo, reportService: report}
+}
+
+// Create manually creates a calculation for a subscription in an open period.
+// POST /periods/{id}/calculations
+// Body: { "subscription_id": 1, "reading_prev": 600, "reading_curr": 608, "quantity": 1, "note": "" }
+func (h *CalculationHandler) Create(w http.ResponseWriter, r *http.Request) {
+	periodID, err := pathID(r, "id")
+	if err != nil {
+		writeError(w, err, http.StatusBadRequest)
+		return
+	}
+
+	var body struct {
+		SubscriptionID int      `json:"subscription_id"`
+		ReadingPrev    *float64 `json:"reading_prev"`
+		ReadingCurr    *float64 `json:"reading_curr"`
+		Quantity       *float64 `json:"quantity"`
+		Note           string   `json:"note"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, err, http.StatusBadRequest)
+		return
+	}
+
+	// Fetch subscription info to get tariff
+	info, err := h.repo.GetSubscriptionInfo(r.Context(), body.SubscriptionID)
+	if err != nil {
+		writeError(w, err, http.StatusBadRequest)
+		return
+	}
+
+	// Calculate quantity and amount
+	var quantity float64
+	if body.Quantity != nil {
+		quantity = *body.Quantity
+	} else if body.ReadingPrev != nil && body.ReadingCurr != nil {
+		quantity = *body.ReadingCurr - *body.ReadingPrev
+		if quantity < 0 {
+			quantity = 0
+		}
+	} else if !info.HasMeter {
+		quantity = 1
+	}
+
+	amount := math.Round(quantity*info.PricePerUnit*1e2) / 1e2
+
+	calc := &domain.Calculation{
+		SubscriptionID: body.SubscriptionID,
+		PeriodID:       periodID,
+		TariffID:       info.TariffID,
+		ReadingPrev:    body.ReadingPrev,
+		ReadingCurr:    body.ReadingCurr,
+		Quantity:       quantity,
+		Amount:         amount,
+		Note:           body.Note,
+	}
+
+	if err := h.repo.Create(r.Context(), calc); err != nil {
+		writeError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	writeJSON(w, calc)
+}
+
+// Delete removes a calculation if no payments exist and period is open.
+// DELETE /calculations/{id}
+func (h *CalculationHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	id, err := pathID(r, "id")
+	if err != nil {
+		writeError(w, err, http.StatusBadRequest)
+		return
+	}
+	if err := h.repo.Delete(r.Context(), id); err != nil {
+		writeError(w, err, http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // GetByPeriod returns enriched calculations (with service name) for a period.

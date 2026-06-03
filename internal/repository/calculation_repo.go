@@ -171,10 +171,39 @@ func (r *CalculationRepo) Create(ctx context.Context, c *domain.Calculation) err
 		INSERT INTO billcore.calculations
 		    (subscription_id, period_id, tariff_id, reading_prev, reading_curr, quantity, amount, note)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		RETURNING id, created_at, updated_at
+		RETURNING id, status, created_at, updated_at
 	`, c.SubscriptionID, c.PeriodID, c.TariffID,
 		c.ReadingPrev, c.ReadingCurr, c.Quantity, c.Amount, c.Note,
-	).Scan(&c.ID, &c.CreatedAt, &c.UpdatedAt)
+	).Scan(&c.ID, &c.Status, &c.CreatedAt, &c.UpdatedAt)
+}
+
+// Delete removes a calculation only if no payments reference it and period is open.
+func (r *CalculationRepo) Delete(ctx context.Context, id int) error {
+	// Check for payments
+	var paymentCount int
+	if err := r.db.QueryRow(ctx, `
+		SELECT COUNT(*) FROM billcore.payments WHERE calculation_id = $1
+	`, id).Scan(&paymentCount); err != nil {
+		return fmt.Errorf("check payments: %w", err)
+	}
+	if paymentCount > 0 {
+		return fmt.Errorf("cannot delete: %d payment(s) reference this calculation", paymentCount)
+	}
+
+	tag, err := r.db.Exec(ctx, `
+		DELETE FROM billcore.calculations c
+		USING billcore.periods p
+		WHERE c.id = $1
+		  AND p.id = c.period_id
+		  AND p.status = 'open'
+	`, id)
+	if err != nil {
+		return fmt.Errorf("delete calculation: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("calculation not found or period is closed")
+	}
+	return nil
 }
 
 // UpdateReading updates reading_curr and reading_prev (if provided), recalculates quantity and amount.
@@ -269,4 +298,44 @@ func scanCalculations(rows interface {
 		return nil, fmt.Errorf("calculations rows: %w", err)
 	}
 	return calcs, nil
+}
+
+// SubscriptionInfo holds data needed to create a calculation manually.
+type SubscriptionInfo struct {
+	ServiceID    int
+	ServiceName  string
+	Unit         string
+	HasMeter     bool
+	TariffID     int
+	PricePerUnit float64
+	LocationName string
+}
+
+// GetSubscriptionInfo returns subscription + active tariff info for manual calculation creation.
+func (r *CalculationRepo) GetSubscriptionInfo(ctx context.Context, subscriptionID int) (*SubscriptionInfo, error) {
+	var info SubscriptionInfo
+	var tariffID *int
+	var pricePerUnit *float64
+	err := r.db.QueryRow(ctx, `
+		SELECT sv.id, sv.name, sv.unit, sv.has_meter,
+		       t.id, t.price_per_unit,
+		       l.name
+		FROM billcore.subscriptions s
+		JOIN billcore.services  sv ON sv.id = s.service_id
+		JOIN billcore.locations l  ON l.id  = s.location_id
+		LEFT JOIN billcore.tariffs t ON t.service_id = sv.id AND t.valid_to IS NULL
+		WHERE s.id = $1
+	`, subscriptionID).Scan(
+		&info.ServiceID, &info.ServiceName, &info.Unit, &info.HasMeter,
+		&tariffID, &pricePerUnit, &info.LocationName,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("subscription not found: %w", err)
+	}
+	if tariffID == nil {
+		return nil, fmt.Errorf("no active tariff for service '%s' — add a tariff first", info.ServiceName)
+	}
+	info.TariffID = *tariffID
+	info.PricePerUnit = *pricePerUnit
+	return &info, nil
 }

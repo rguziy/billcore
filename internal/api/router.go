@@ -91,9 +91,11 @@ func NewRouter(
 
 		// Calculations (period-scoped)
 		r.Get("/periods/{id}/calculations", calculations.GetByPeriod)
+		r.Post("/periods/{id}/calculations", calculations.Create)
 		r.Patch("/calculations/{id}/reading", calculations.UpdateReading)
 		r.Patch("/calculations/{id}/status", calculations.UpdateStatus)
 		r.Patch("/calculations/{id}/note", calculations.UpdateNote)
+		r.Delete("/calculations/{id}", calculations.Delete)
 	})
 
 	return r

@@ -102,6 +102,16 @@ export const periodsApi = {
 export const calculationsApi = {
   listBySubscription: (subscriptionId: number) =>
     request<Calculation[]>(`/subscriptions/${subscriptionId}/calculations`),
+  create: (periodId: number, data: {
+    subscription_id: number;
+    reading_prev?: number;
+    reading_curr?: number;
+    quantity?: number;
+    note?: string;
+  }) =>
+    request<Calculation>(`/periods/${periodId}/calculations`, {
+      method: "POST", body: JSON.stringify(data),
+    }),
   updateReading: (id: number, readingCurr: number, readingPrev?: number) =>
     request<void>(`/calculations/${id}/reading`, {
       method: "PATCH",
@@ -115,4 +125,5 @@ export const calculationsApi = {
     request<void>(`/calculations/${id}/note`, {
       method: "PATCH", body: JSON.stringify({ note }),
     }),
+  delete: (id: number) => request<void>(`/calculations/${id}`, { method: "DELETE" }),
 };

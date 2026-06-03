@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { periodsApi, calculationsApi, clientsApi } from "@/lib/api";
+import { periodsApi, calculationsApi, clientsApi, subscriptionsApi, servicesApi } from "@/lib/api";
 import type { CalculationRow, Period, Client, CalculationStatus } from "@/types";
 import Alert from "@/app/_components/Alert";
 import Modal from "@/app/_components/Modal";
@@ -36,7 +36,23 @@ function CalculationsContent() {
     note: "",
   });
 
-  // status-only modal (for locked period — only paying)
+  // create modal
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    subscription_id: "",
+    reading_prev: "",
+    reading_curr: "",
+    quantity: "",
+    note: "",
+  });
+
+  // delete confirm
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+
+  // subscriptions for create modal (loaded from API when period client selected)
+  const [subscriptions, setSubscriptions] = useState<{id: number; label: string; has_meter: boolean}[]>([]);
+
+  // status-only modal (for locked period)
   const [statusId, setStatusId]   = useState<number | null>(null);
   const [newStatus, setNewStatus] = useState<CalculationStatus>("paid");
 
@@ -67,6 +83,62 @@ function CalculationsContent() {
     if (!periodId) return;
     periodsApi.getCalculations(Number(periodId), clientId ? Number(clientId) : undefined)
       .then(setCalcs).catch((e) => setError(e.message));
+  };
+
+  // Load subscriptions for create modal — exclude those already in calculations for this period
+  useEffect(() => {
+    if (!clientId) { setSubscriptions([]); return; }
+    subscriptionsApi.listAll().then(async (subs) => {
+      const svcs = await servicesApi.list();
+      const locs = await clientsApi.listLocations(Number(clientId));
+      const locIds = new Set(locs.map((l) => l.id));
+      const filtered = subs.filter((s) => locIds.has(s.location_id));
+      const svcMap = Object.fromEntries(svcs.map((s) => [s.id, s]));
+      const locMap = Object.fromEntries(locs.map((l) => [l.id, l]));
+
+      // exclude subscriptions that already have a calculation in current period
+      const existingSubIds = new Set(calcs.map((c) => c.subscription_id));
+
+      setSubscriptions(
+        filtered
+          .filter((s) => !existingSubIds.has(s.id))
+          .map((s) => ({
+            id: s.id,
+            label: `${svcMap[s.service_id]?.name ?? "?"} — ${locMap[s.location_id]?.name ?? "?"}`,
+            has_meter: svcMap[s.service_id]?.has_meter ?? false,
+          }))
+      );
+    }).catch((e) => setError(e.message));
+  }, [clientId, calcs]);
+
+  const openCreate = () => {
+    setCreateForm({ subscription_id: "", reading_prev: "", reading_curr: "", quantity: "", note: "" });
+    setShowCreate(true);
+  };
+
+  const saveCreate = async () => {
+    if (!periodId || !createForm.subscription_id) return;
+    try {
+      const sub = subscriptions.find((s) => s.id === Number(createForm.subscription_id));
+      await calculationsApi.create(Number(periodId), {
+        subscription_id: Number(createForm.subscription_id),
+        reading_prev:  createForm.reading_prev !== "" ? Number(createForm.reading_prev) : undefined,
+        reading_curr:  createForm.reading_curr !== "" ? Number(createForm.reading_curr) : undefined,
+        quantity:      !sub?.has_meter && createForm.quantity !== "" ? Number(createForm.quantity) : undefined,
+        note:          createForm.note,
+      });
+      setShowCreate(false);
+      reload();
+    } catch (e: any) { setError(e.message); }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+    try {
+      await calculationsApi.delete(deleteId);
+      setDeleteId(null);
+      reload();
+    } catch (e: any) { setError(e.message); }
   };
 
   const openEdit = (c: CalculationRow) => {
@@ -123,12 +195,19 @@ function CalculationsContent() {
     <>
       <div className="bc-page-header">
         <h1>Calculations</h1>
-        {currentPeriod && (
-          <span className={`badge fs-6 ${currentPeriod.status === "open" ? "badge-paid" : "badge-cancelled"}`}>
-            <i className={`bi bi-${currentPeriod.status === "open" ? "unlock" : "lock"} me-1`} />
-            {currentPeriod.status === "open" ? "Open" : "Closed"}
-          </span>
-        )}
+        <div className="d-flex align-items-center gap-2">
+          {currentPeriod && (
+            <span className={`badge fs-6 ${currentPeriod.status === "open" ? "badge-paid" : "badge-cancelled"}`}>
+              <i className={`bi bi-${currentPeriod.status === "open" ? "unlock" : "lock"} me-1`} />
+              {currentPeriod.status === "open" ? "Open" : "Closed"}
+            </span>
+          )}
+          {!isLocked && periodId && (
+            <button className="btn btn-primary btn-sm" onClick={openCreate}>
+              <i className="bi bi-plus-lg me-1" /> Add Calculation
+            </button>
+          )}
+        </div>
       </div>
 
       <Alert message={error} onClose={() => setError(null)} />
@@ -221,10 +300,16 @@ function CalculationsContent() {
                       </td>
                       <td className="text-end pe-3">
                         {!isLocked ? (
-                          <button className="btn btn-sm btn-outline-primary" title="Edit"
-                            onClick={() => openEdit(c)}>
-                            <i className="bi bi-pencil" />
-                          </button>
+                          <div className="d-flex gap-1 justify-content-end">
+                            <button className="btn btn-sm btn-outline-primary" title="Edit"
+                              onClick={() => openEdit(c)}>
+                              <i className="bi bi-pencil" />
+                            </button>
+                            <button className="btn btn-sm btn-outline-danger" title="Delete"
+                              onClick={() => setDeleteId(c.id)}>
+                              <i className="bi bi-trash" />
+                            </button>
+                          </div>
                         ) : (
                           <button className="btn btn-sm btn-outline-secondary" title="Mark as paid"
                             onClick={() => { setStatusId(c.id); setNewStatus("paid"); }}>
@@ -240,6 +325,93 @@ function CalculationsContent() {
           )}
         </div>
       )}
+
+      {/* Create modal */}
+      <Modal title="Add Calculation" show={showCreate} onClose={() => setShowCreate(false)}
+        onConfirm={saveCreate} confirmLabel="Create">
+        <div className="mb-3">
+          <label className="form-label">Subscription *</label>
+          <select className="form-select" value={createForm.subscription_id}
+            onChange={(e) => {
+              const subId = e.target.value;
+              const sub = subscriptions.find((s) => s.id === Number(subId));
+              setCreateForm({
+                subscription_id: subId,
+                reading_prev: "0",
+                reading_curr: "0",
+                quantity: sub?.has_meter ? "" : "1",
+                note: "",
+              });
+            }}>
+            <option value="">— select subscription —</option>
+            {subscriptions.map((s) => (
+              <option key={s.id} value={s.id}>{s.label}</option>
+            ))}
+          </select>
+          {subscriptions.length === 0 && (
+            <div className="form-text text-warning">
+              {clientId ? "All subscriptions already have calculations for this period." : "Select a client filter first."}
+            </div>
+          )}
+        </div>
+        {(() => {
+          const sub = subscriptions.find((s) => s.id === Number(createForm.subscription_id));
+          return sub?.has_meter ? (
+            <>
+              <div className="mb-3">
+                <label className="form-label">Previous reading</label>
+                <input className="form-control" type="number" step="0.001"
+                  value={createForm.reading_prev}
+                  onChange={(e) => {
+                    const prev = e.target.value;
+                    setCreateForm((f) => ({
+                      ...f,
+                      reading_prev: prev,
+                      // keep curr in sync if user hasn't changed it yet
+                      reading_curr: f.reading_curr === f.reading_prev ? prev : f.reading_curr,
+                    }));
+                  }}
+                  placeholder="0" />
+              </div>
+              <div className="mb-3">
+                <label className="form-label">Current reading *</label>
+                <input className="form-control" type="number" step="0.001"
+                  value={createForm.reading_curr}
+                  onChange={(e) => setCreateForm({ ...createForm, reading_curr: e.target.value })} />
+                {createForm.reading_curr !== "" && (
+                  <div className="form-text">
+                    Quantity: <strong>
+                      {Math.max(0, Number(createForm.reading_curr) - Number(createForm.reading_prev || 0)).toFixed(3)}
+                    </strong>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : sub ? (
+            <div className="mb-3">
+              <label className="form-label">Quantity</label>
+              <input className="form-control" type="number" step="0.01"
+                value={createForm.quantity}
+                onChange={(e) => setCreateForm({ ...createForm, quantity: e.target.value })} />
+            </div>
+          ) : null;
+        })()}
+        <div className="mb-3">
+          <label className="form-label">Note</label>
+          <input className="form-control" value={createForm.note}
+            onChange={(e) => setCreateForm({ ...createForm, note: e.target.value })} />
+        </div>
+      </Modal>
+
+      {/* Delete confirm */}
+      <Modal title="Delete Calculation" show={deleteId !== null}
+        onClose={() => setDeleteId(null)} onConfirm={confirmDelete}
+        confirmLabel="Delete" confirmVariant="danger">
+        <p>Are you sure you want to delete this calculation?</p>
+        <p className="text-muted mb-0" style={{ fontSize: "0.875rem" }}>
+          This is only possible if no payments reference it and the period is open.
+        </p>
+      </Modal>
 
       {/* Edit modal */}
       <Modal title={`Edit — ${editCalc?.service_name ?? ""}`}
