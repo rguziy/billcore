@@ -58,7 +58,17 @@ function CalculationsContent() {
 
   useEffect(() => {
     Promise.all([periodsApi.list(), clientsApi.list()])
-      .then(([p, c]) => { setPeriods(p); setClients(c); })
+      .then(([p, c]) => {
+        setPeriods(p);
+        setClients(c);
+        // auto-select open period if no period in URL
+        if (!searchParams.get("period_id") && p.length > 0) {
+          const open = p.find((x) => x.status === "open") ?? p[0];
+          const params = new URLSearchParams(searchParams.toString());
+          params.set("period_id", String(open.id));
+          router.replace(`/calculations?${params.toString()}`);
+        }
+      })
       .catch((e) => setError(e.message));
   }, []);
 
@@ -188,7 +198,6 @@ function CalculationsContent() {
   };
 
   const isLocked = currentPeriod?.status === "closed";
-  const total    = calcs.reduce((s, c) => s + c.amount, 0);
   const needsReading = calcs.filter((c) => c.reading_prev != null && c.reading_curr == null).length;
 
   return (
@@ -239,14 +248,30 @@ function CalculationsContent() {
             </select>
           </div>
           {calcs.length > 0 && (
-            <div className="col-md-4 d-flex gap-3 pb-1 align-items-end">
-              <div><span className="text-muted me-1">Rows:</span><strong>{calcs.length}</strong></div>
-              <div><span className="text-muted me-1">Total:</span><strong>{total.toFixed(2)}</strong></div>
-              {needsReading > 0 && (
-                <span className="badge badge-pending">
-                  <i className="bi bi-exclamation-triangle me-1" />{needsReading} need reading
-                </span>
-              )}
+            <div className="col-12 mt-2">
+              <div className="d-flex gap-4">
+                <div>
+                  <span className="text-muted me-1" style={{ fontSize: "0.8rem" }}>Total accrued:</span>
+                  <strong>{calcs.reduce((s, c) => s + c.amount, 0).toFixed(2)}</strong>
+                </div>
+                <div>
+                  <span className="text-muted me-1" style={{ fontSize: "0.8rem" }}>Paid:</span>
+                  <strong style={{ color: "#059669" }}>
+                    {calcs.filter((c) => c.status === "paid").reduce((s, c) => s + c.amount, 0).toFixed(2)}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-muted me-1" style={{ fontSize: "0.8rem" }}>Pending:</span>
+                  <strong style={{ color: "#dc2626" }}>
+                    {calcs.filter((c) => c.status === "pending").reduce((s, c) => s + c.amount, 0).toFixed(2)}
+                  </strong>
+                </div>
+                {needsReading > 0 && (
+                  <span className="badge badge-pending align-self-center">
+                    <i className="bi bi-exclamation-triangle me-1" />{needsReading} need reading
+                  </span>
+                )}
+              </div>
             </div>
           )}
         </div>

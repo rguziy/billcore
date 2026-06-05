@@ -339,3 +339,42 @@ func (r *CalculationRepo) GetSubscriptionInfo(ctx context.Context, subscriptionI
 	info.PricePerUnit = *pricePerUnit
 	return &info, nil
 }
+
+// GetPaidRows returns paid calculations for a client with service info.
+func (r *CalculationRepo) GetPaidRows(ctx context.Context, clientID int) ([]domain.CalculationRow, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT c.id, c.subscription_id, c.period_id, c.tariff_id,
+		       c.reading_prev, c.reading_curr, c.quantity, c.amount,
+		       c.status, c.note, c.created_at, c.updated_at,
+		       sv.name, sv.unit, l.name AS location_name, sv.has_meter
+		FROM billcore.calculations c
+		JOIN billcore.subscriptions s  ON s.id  = c.subscription_id
+		JOIN billcore.services      sv ON sv.id = s.service_id
+		JOIN billcore.locations     l  ON l.id  = s.location_id
+		WHERE l.client_id = $1 AND c.status = 'paid'
+		ORDER BY c.period_id DESC, sv.name
+	`, clientID)
+	if err != nil {
+		return nil, fmt.Errorf("paid rows: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]domain.CalculationRow, 0)
+	for rows.Next() {
+		var cr domain.CalculationRow
+		var note *string
+		if err := rows.Scan(
+			&cr.ID, &cr.SubscriptionID, &cr.PeriodID, &cr.TariffID,
+			&cr.ReadingPrev, &cr.ReadingCurr, &cr.Quantity, &cr.Amount,
+			&cr.Status, &note, &cr.CreatedAt, &cr.UpdatedAt,
+			&cr.ServiceName, &cr.Unit, &cr.LocationName, &cr.HasMeter,
+		); err != nil {
+			return nil, fmt.Errorf("paid rows scan: %w", err)
+		}
+		if note != nil {
+			cr.Note = *note
+		}
+		result = append(result, cr)
+	}
+	return result, nil
+}

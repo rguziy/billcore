@@ -2,20 +2,17 @@ import Link from "next/link";
 
 export default function Dashboard() {
   const cards = [
-    { href: "/clients",       icon: "bi-people",       label: "Clients",       color: "#1a56db" },
-    { href: "/locations",     icon: "bi-geo-alt",      label: "Locations",     color: "#dc2626" },
-    { href: "/services",      icon: "bi-grid",         label: "Services",      color: "#0891b2" },
-    { href: "/subscriptions", icon: "bi-link-45deg",   label: "Subscriptions", color: "#f59e0b" },
-    { href: "/periods",       icon: "bi-calendar3",    label: "Periods",       color: "#7c3aed" },
-    { href: "/calculations",  icon: "bi-calculator",   label: "Calculations",  color: "#9333ea" },
-    { href: "/payments",      icon: "bi-credit-card",  label: "Payments",      color: "#059669" },
+    { href: "/clients",       icon: "bi-people",      label: "Clients",       color: "#1a56db" },
+    { href: "/locations",     icon: "bi-geo-alt",     label: "Locations",     color: "#dc2626" },
+    { href: "/services",      icon: "bi-grid",        label: "Services",      color: "#0891b2" },
+    { href: "/subscriptions", icon: "bi-link-45deg",  label: "Subscriptions", color: "#f59e0b" },
+    { href: "/periods",       icon: "bi-calendar3",   label: "Periods",       color: "#7c3aed" },
+    { href: "/calculations",  icon: "bi-calculator",  label: "Calculations",  color: "#9333ea" },
   ];
 
   return (
     <>
-      <div className="bc-page-header">
-        <h1>Dashboard</h1>
-      </div>
+      <div className="bc-page-header"><h1>Dashboard</h1></div>
       <div className="row g-3">
         {cards.map((c) => (
           <div key={c.href} className="col-sm-6 col-lg-4 col-xl-3">

@@ -73,18 +73,6 @@ export interface Calculation {
   updated_at: string;
 }
 
-export type PaymentMethod = "cash" | "card" | "bank_transfer" | "online";
-
-export interface Payment {
-  id: number;
-  client_id: number;
-  calculation_id?: number;
-  amount: number;
-  method: PaymentMethod;
-  paid_at: string;
-  note?: string;
-}
-
 export interface CalculationRow extends Calculation {
   service_name: string;
   unit: string;
@@ -93,9 +81,9 @@ export interface CalculationRow extends Calculation {
 }
 
 export interface ClientBalance {
+  client_id: number;
   debt: number;
   paid_total: number;
-  balance: number;
 }
 
 export interface OpenPeriodResponse {

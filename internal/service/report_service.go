@@ -15,21 +15,20 @@ func NewReportService(db *pgxpool.Pool) *ReportService {
 	return &ReportService{db: db}
 }
 
-// ClientBalance holds the financial summary for a client.
+// ClientBalance holds the financial summary for a client based on calculation statuses.
 type ClientBalance struct {
 	ClientID  int     `json:"client_id"`
-	Debt      float64 `json:"debt"`
-	PaidTotal float64 `json:"paid_total"`
-	Balance   float64 `json:"balance"`
+	Debt      float64 `json:"debt"`       // sum of pending calculations
+	PaidTotal float64 `json:"paid_total"` // sum of paid calculations
 }
 
 func (s *ReportService) GetClientBalance(ctx context.Context, clientID int) (*ClientBalance, error) {
 	var b ClientBalance
 	err := s.db.QueryRow(ctx, `
-		SELECT client_id, debt, paid_total, balance
+		SELECT client_id, debt, paid_total
 		FROM billcore.v_client_balance
 		WHERE client_id = $1
-	`, clientID).Scan(&b.ClientID, &b.Debt, &b.PaidTotal, &b.Balance)
+	`, clientID).Scan(&b.ClientID, &b.Debt, &b.PaidTotal)
 	if err != nil {
 		return nil, fmt.Errorf("client balance: %w", err)
 	}

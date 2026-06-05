@@ -15,12 +15,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return data;
 }
 
-// --- Clients ---
 import type {
-  Client, Location, ClientBalance, Calculation, Payment,
+  Client, Location, ClientBalance, Calculation, CalculationRow,
   Service, Tariff, Subscription, Period, OpenPeriodResponse,
 } from "@/types";
 
+// --- Clients ---
 export const clientsApi = {
   list: () => request<Client[]>("/clients"),
   get: (id: number) => request<Client>(`/clients/${id}`),
@@ -40,9 +40,7 @@ export const clientsApi = {
 
   balance: (clientId: number) => request<ClientBalance>(`/clients/${clientId}/balance`),
   pending: (clientId: number) => request<CalculationRow[]>(`/clients/${clientId}/pending`),
-  payments: (clientId: number) => request<Payment[]>(`/clients/${clientId}/payments`),
-  createPayment: (clientId: number, data: Omit<Payment, "id" | "client_id" | "paid_at">) =>
-    request<Payment>(`/clients/${clientId}/payments`, { method: "POST", body: JSON.stringify(data) }),
+  paid: (clientId: number) => request<CalculationRow[]>(`/clients/${clientId}/paid`),
 };
 
 // --- Services ---
@@ -91,7 +89,6 @@ export const periodsApi = {
   close: (id: number) => request<void>(`/periods/${id}/close`, { method: "PATCH" }),
   reopen: (id: number) => request<void>(`/periods/${id}/reopen`, { method: "PATCH" }),
   delete: (id: number) => request<void>(`/periods/${id}`, { method: "DELETE" }),
-
   getCalculations: (periodId: number, clientId?: number) => {
     const qs = clientId ? `?client_id=${clientId}` : "";
     return request<CalculationRow[]>(`/periods/${periodId}/calculations${qs}`);

@@ -221,6 +221,20 @@ func (h *CalculationHandler) UpdateNote(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *CalculationHandler) ListPaid(w http.ResponseWriter, r *http.Request) {
+	clientID, err := pathID(r, "id")
+	if err != nil {
+		writeError(w, err, http.StatusBadRequest)
+		return
+	}
+	rows, err := h.repo.GetPaidRows(r.Context(), clientID)
+	if err != nil {
+		writeError(w, err, http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, rows)
+}
+
 func (h *CalculationHandler) ClientBalance(w http.ResponseWriter, r *http.Request) {
 	clientID, err := pathID(r, "id")
 	if err != nil {

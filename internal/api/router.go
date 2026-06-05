@@ -15,7 +15,6 @@ func NewRouter(
 	clients *handler.ClientHandler,
 	services *handler.ServiceHandler,
 	calculations *handler.CalculationHandler,
-	payments *handler.PaymentHandler,
 	subscriptions *handler.SubscriptionHandler,
 	periods *handler.PeriodHandler,
 ) *chi.Mux {
@@ -57,8 +56,7 @@ func NewRouter(
 		r.Get("/clients/{id}/balance", calculations.ClientBalance)
 		r.Get("/clients/{id}/readings", calculations.LatestReadings)
 		r.Get("/clients/{id}/pending", calculations.ListPending)
-		r.Get("/clients/{id}/payments", payments.ListByClient)
-		r.Post("/clients/{id}/payments", payments.Create)
+		r.Get("/clients/{id}/paid", calculations.ListPaid)
 
 		// Services
 		r.Get("/services", services.List)
@@ -89,7 +87,7 @@ func NewRouter(
 		r.Patch("/periods/{id}/reopen", periods.Reopen)
 		r.Delete("/periods/{id}", periods.Delete)
 
-		// Calculations (period-scoped)
+		// Calculations
 		r.Get("/periods/{id}/calculations", calculations.GetByPeriod)
 		r.Post("/periods/{id}/calculations", calculations.Create)
 		r.Patch("/calculations/{id}/reading", calculations.UpdateReading)

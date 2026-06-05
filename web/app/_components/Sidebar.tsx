@@ -11,7 +11,6 @@ const nav = [
   { href: "/subscriptions", label: "Subscriptions",icon: "bi-link-45deg" },
   { href: "/periods",       label: "Periods",      icon: "bi-calendar3" },
   { href: "/calculations",  label: "Calculations", icon: "bi-calculator" },
-  { href: "/payments",      label: "Payments",     icon: "bi-credit-card" },
 ];
 
 export default function Sidebar() {

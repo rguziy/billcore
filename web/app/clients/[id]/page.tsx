@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { clientsApi, subscriptionsApi, servicesApi } from "@/lib/api";
-import type { Client, Location, ClientBalance, CalculationRow, Payment, Subscription, Service } from "@/types";
+import type { Client, Location, ClientBalance, CalculationRow, Subscription, Service } from "@/types";
 import Modal from "@/app/_components/Modal";
 import Alert from "@/app/_components/Alert";
 import Link from "next/link";
@@ -18,15 +18,12 @@ export default function ClientDetailPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [balance, setBalance] = useState<ClientBalance | null>(null);
   const [pending, setPending] = useState<CalculationRow[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
+  const [paid, setPaid] = useState<CalculationRow[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const [showLocModal, setShowLocModal] = useState(false);
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [locForm, setLocForm] = useState({ name: "", address: "", is_default: false });
-
-  const [showPayModal, setShowPayModal] = useState(false);
-  const [payForm, setPayForm] = useState({ amount: 0, method: "cash", note: "" });
 
   const [showSubModal, setShowSubModal] = useState(false);
   const [subLocationId, setSubLocationId] = useState(0);
@@ -55,15 +52,15 @@ export default function ClientDetailPage() {
 
   const load = async () => {
     try {
-      const [c, locs, bal, pend, pays, svcs] = await Promise.all([
+      const [c, locs, bal, pend, paidCalcs, svcs] = await Promise.all([
         clientsApi.get(clientId),
         clientsApi.listLocations(clientId),
         clientsApi.balance(clientId),
         clientsApi.pending(clientId),
-        clientsApi.payments(clientId),
+        clientsApi.paid(clientId),
         servicesApi.list(),
       ]);
-      setClient(c); setLocations(locs); setBalance(bal); setPending(pend); setPayments(pays); setServices(svcs);
+      setClient(c); setLocations(locs); setBalance(bal); setPending(pend); setPaid(paidCalcs); setServices(svcs);
 
       // load subscriptions for all locations
       const allSubs = await Promise.all(locs.map((l) => subscriptionsApi.listByLocation(l.id)));
@@ -113,15 +110,6 @@ export default function ClientDetailPage() {
     } catch (e: any) { setError(e.message); }
   };
 
-  const savePayment = async () => {
-    try {
-      await clientsApi.createPayment(clientId, payForm as any);
-      setShowPayModal(false);
-      setPayForm({ amount: 0, method: "cash", note: "" });
-      load();
-    } catch (e: any) { setError(e.message); }
-  };
-
   if (!client) return <div className="text-center p-5 text-muted">Loading...</div>;
 
   return (
@@ -159,19 +147,13 @@ export default function ClientDetailPage() {
             <div className="bc-card">
               <h6 className="text-muted mb-3" style={{ fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Balance</h6>
               <div className="row text-center">
-                <div className="col-4">
+                <div className="col-6">
                   <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#dc2626" }}>{balance.debt.toFixed(2)}</div>
-                  <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Debt</div>
+                  <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Pending</div>
                 </div>
-                <div className="col-4">
+                <div className="col-6">
                   <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#059669" }}>{balance.paid_total.toFixed(2)}</div>
-                  <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Paid total</div>
-                </div>
-                <div className="col-4">
-                  <div style={{ fontSize: "1.5rem", fontWeight: 700, color: balance.balance > 0 ? "#dc2626" : "#059669" }}>
-                    {Math.abs(balance.balance).toFixed(2)}
-                  </div>
-                  <div style={{ fontSize: "0.75rem", color: "#64748b" }}>{balance.balance < 0 ? "Credit" : "Balance"}</div>
+                  <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Paid</div>
                 </div>
               </div>
             </div>
@@ -281,9 +263,9 @@ export default function ClientDetailPage() {
       <div className="bc-card">
         <div className="d-flex justify-content-between align-items-center mb-3">
           <h6 className="mb-0" style={{ fontWeight: 600 }}>Pending calculations</h6>
-          <button className="btn btn-sm btn-success" onClick={() => setShowPayModal(true)}>
-            <i className="bi bi-cash me-1" /> Add payment
-          </button>
+          <Link href={`/calculations?client_id=${clientId}`} className="btn btn-sm btn-outline-primary">
+            <i className="bi bi-calculator me-1" /> Manage
+          </Link>
         </div>
         <table className="table bc-table mb-0">
           <thead>
@@ -326,28 +308,38 @@ export default function ClientDetailPage() {
         </table>
       </div>
 
-      {/* Payments */}
+      {/* Paid calculations history */}
       <div className="bc-card">
         <h6 className="mb-3" style={{ fontWeight: 600 }}>Payment history</h6>
         <table className="table bc-table mb-0">
           <thead>
             <tr>
-              <th>Date</th>
+              <th>Service</th>
+              <th>Location</th>
+              <th>Period</th>
               <th>Amount</th>
-              <th>Method</th>
               <th>Note</th>
             </tr>
           </thead>
           <tbody>
-            {payments.length === 0 && (
-              <tr><td colSpan={4} className="text-center text-muted p-3">No payments</td></tr>
+            {paid.length === 0 && (
+              <tr><td colSpan={5} className="text-center text-muted p-3">No paid calculations</td></tr>
             )}
-            {payments.map((p) => (
-              <tr key={p.id}>
-                <td>{new Date(p.paid_at).toLocaleDateString()}</td>
-                <td><strong>{p.amount.toFixed(2)}</strong></td>
-                <td>{p.method}</td>
-                <td>{p.note || "—"}</td>
+            {paid.map((c) => (
+              <tr key={c.id}>
+                <td className="fw-semibold">
+                  {c.service_name}
+                  <span className="text-muted ms-1" style={{ fontSize: "0.75rem" }}>({c.unit})</span>
+                </td>
+                <td style={{ fontSize: "0.85rem", color: "#64748b" }}>{c.location_name}</td>
+                <td>
+                  <Link href={`/calculations?period_id=${c.period_id}&client_id=${clientId}`}
+                    className="text-decoration-none" style={{ fontSize: "0.85rem" }}>
+                    #{c.period_id}
+                  </Link>
+                </td>
+                <td><strong>{c.amount.toFixed(2)}</strong></td>
+                <td>{c.note || "—"}</td>
               </tr>
             ))}
           </tbody>
@@ -424,29 +416,6 @@ export default function ClientDetailPage() {
         </div>
       </Modal>
 
-      {/* Payment modal */}
-      <Modal title="Add Payment" show={showPayModal} onClose={() => setShowPayModal(false)} onConfirm={savePayment} confirmLabel="Add payment" confirmVariant="success">
-        <div className="mb-3">
-          <label className="form-label">Amount *</label>
-          <input className="form-control" type="number" step="0.01" value={payForm.amount}
-            onChange={(e) => setPayForm({ ...payForm, amount: Number(e.target.value) })} />
-        </div>
-        <div className="mb-3">
-          <label className="form-label">Method</label>
-          <select className="form-select" value={payForm.method}
-            onChange={(e) => setPayForm({ ...payForm, method: e.target.value })}>
-            <option value="cash">Cash</option>
-            <option value="card">Card</option>
-            <option value="bank_transfer">Bank transfer</option>
-            <option value="online">Online</option>
-          </select>
-        </div>
-        <div className="mb-3">
-          <label className="form-label">Note</label>
-          <input className="form-control" value={payForm.note}
-            onChange={(e) => setPayForm({ ...payForm, note: e.target.value })} />
-        </div>
-      </Modal>
     </>
   );
 }

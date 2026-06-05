@@ -51,18 +51,16 @@ func main() {
 	serviceRepo      := repository.NewServiceRepo(pool)
 	subscriptionRepo := repository.NewSubscriptionRepo(pool)
 	calcRepo         := repository.NewCalculationRepo(pool)
-	paymentRepo      := repository.NewPaymentRepo(pool)
 	periodRepo       := repository.NewPeriodRepo(pool)
 
 	// Services
-	reportSvc  := service.NewReportService(pool)
-	periodSvc  := service.NewPeriodService(pool, periodRepo, serviceRepo)
+	reportSvc := service.NewReportService(pool)
+	periodSvc := service.NewPeriodService(pool, periodRepo, serviceRepo)
 
 	// Handlers
 	clientHandler       := handler.NewClientHandler(clientRepo)
 	serviceHandler      := handler.NewServiceHandler(serviceRepo)
 	calcHandler         := handler.NewCalculationHandler(calcRepo, reportSvc)
-	paymentHandler      := handler.NewPaymentHandler(paymentRepo)
 	subscriptionHandler := handler.NewSubscriptionHandler(subscriptionRepo)
 	periodHandler       := handler.NewPeriodHandler(periodRepo, periodSvc)
 
@@ -71,7 +69,6 @@ func main() {
 		clientHandler,
 		serviceHandler,
 		calcHandler,
-		paymentHandler,
 		subscriptionHandler,
 		periodHandler,
 	)
