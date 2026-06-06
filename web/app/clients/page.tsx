@@ -111,7 +111,8 @@ export default function ClientsPage() {
             <input className="form-control" placeholder="e.g. Гузій or BC-12345678"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={handleKey} />
+              onKeyDown={handleKey}
+              placeholder="e.g. Bob or BC-12345678" />
           </div>
           <div className="col-md-2">
             <label className="form-label">Status</label>
@@ -182,6 +183,10 @@ export default function ClientsPage() {
                     </td>
                     <td className="text-end pe-3">
                       {/* Quick access */}
+                      <Link href={`/locations?client_id=${c.id}`}
+                        className="btn btn-sm btn-outline-secondary me-1" title="Locations">
+                        <i className="bi bi-geo-alt" />
+                      </Link>
                       <Link href={`/subscriptions?client_id=${c.id}`}
                         className="btn btn-sm btn-outline-secondary me-1" title="Subscriptions">
                         <i className="bi bi-link-45deg" />
