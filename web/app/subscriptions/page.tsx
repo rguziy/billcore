@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { subscriptionsApi, clientsApi, servicesApi } from "@/lib/api";
 import type { Subscription, Client, Service, Location } from "@/types";
 import Modal from "@/app/_components/Modal";
 import Alert from "@/app/_components/Alert";
 import Link from "next/link";
 
-export default function SubscriptionsPage() {
+function SubscriptionsContent() {
+  const searchParams = useSearchParams();
   const [subs, setSubs]         = useState<Subscription[]>([]);
   const [clients, setClients]   = useState<Client[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -15,8 +17,10 @@ export default function SubscriptionsPage() {
   const [error, setError]       = useState<string | null>(null);
   const [loading, setLoading]   = useState(true);
 
-  // filters
-  const [filterClient, setFilterClient] = useState<number | "">("");
+  // filters — initialise from URL param
+  const [filterClient, setFilterClient] = useState<number | "">(
+    searchParams.get("client_id") ? Number(searchParams.get("client_id")) : ""
+  );
 
   // create modal
   const [showCreate, setShowCreate] = useState(false);
@@ -38,12 +42,12 @@ export default function SubscriptionsPage() {
 
   const load = async () => {
     try {
-      const [s, c, sv] = await Promise.all([
+      const [s, cp, sv] = await Promise.all([
         subscriptionsApi.listAll(),
-        clientsApi.list(),
+        clientsApi.list({ limit: 1000 }),
         servicesApi.list(),
       ]);
-      setSubs(s); setClients(c); setServices(sv);
+      setSubs(s); setClients(cp.clients); setServices(sv);
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
   };
@@ -263,5 +267,13 @@ export default function SubscriptionsPage() {
         Are you sure? All calculations for this subscription will lose their reference.
       </Modal>
     </>
+  );
+}
+
+export default function SubscriptionsPage() {
+  return (
+    <Suspense fallback={<div className="p-4 text-center text-muted">Loading...</div>}>
+      <SubscriptionsContent />
+    </Suspense>
   );
 }

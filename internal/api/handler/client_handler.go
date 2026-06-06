@@ -19,12 +19,25 @@ func NewClientHandler(repo *repository.ClientRepo) *ClientHandler {
 }
 
 func (h *ClientHandler) List(w http.ResponseWriter, r *http.Request) {
-	clients, err := h.repo.GetAll(r.Context())
+	q := r.URL.Query()
+
+	limit, _ := strconv.Atoi(q.Get("limit"))
+	offset, _ := strconv.Atoi(q.Get("offset"))
+	if limit <= 0 {
+		limit = 20
+	}
+
+	page, err := h.repo.Search(r.Context(), repository.ClientFilter{
+		Search: q.Get("search"),
+		Status: q.Get("status"),
+		Limit:  limit,
+		Offset: offset,
+	})
 	if err != nil {
 		writeError(w, err, http.StatusInternalServerError)
 		return
 	}
-	writeJSON(w, clients)
+	writeJSON(w, page)
 }
 
 func (h *ClientHandler) Get(w http.ResponseWriter, r *http.Request) {

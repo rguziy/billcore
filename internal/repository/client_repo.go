@@ -16,6 +16,79 @@ func NewClientRepo(db *pgxpool.Pool) *ClientRepo {
 	return &ClientRepo{db: db}
 }
 
+// ClientFilter holds search and pagination params.
+type ClientFilter struct {
+	Search string // partial match on full_name or account_number
+	Status string // "active", "inactive", "" = all
+	Limit  int
+	Offset int
+}
+
+// ClientPage holds paginated results.
+type ClientPage struct {
+	Clients []domain.Client `json:"clients"`
+	Total   int             `json:"total"`
+	Limit   int             `json:"limit"`
+	Offset  int             `json:"offset"`
+}
+
+func (r *ClientRepo) Search(ctx context.Context, f ClientFilter) (*ClientPage, error) {
+	if f.Limit <= 0 {
+		f.Limit = 20
+	}
+
+	args := []any{}
+	where := "WHERE 1=1"
+	i := 1
+
+	if f.Search != "" {
+		where += fmt.Sprintf(` AND (full_name ILIKE $%d OR account_number ILIKE $%d)`, i, i)
+		args = append(args, "%"+f.Search+"%")
+		i++
+	}
+	if f.Status == "active" {
+		where += " AND is_active = TRUE"
+	} else if f.Status == "inactive" {
+		where += " AND is_active = FALSE"
+	}
+
+	// total count
+	var total int
+	if err := r.db.QueryRow(ctx,
+		fmt.Sprintf(`SELECT COUNT(*) FROM billcore.clients %s`, where),
+		args...,
+	).Scan(&total); err != nil {
+		return nil, fmt.Errorf("clients count: %w", err)
+	}
+
+	// paginated rows
+	args = append(args, f.Limit, f.Offset)
+	rows, err := r.db.Query(ctx, fmt.Sprintf(`
+		SELECT id, full_name, phone, email, account_number, is_active, created_at, updated_at
+		FROM billcore.clients
+		%s
+		ORDER BY full_name
+		LIMIT $%d OFFSET $%d
+	`, where, i, i+1), args...)
+	if err != nil {
+		return nil, fmt.Errorf("clients search: %w", err)
+	}
+	defer rows.Close()
+
+	clients := make([]domain.Client, 0)
+	for rows.Next() {
+		var c domain.Client
+		if err := rows.Scan(
+			&c.ID, &c.FullName, &c.Phone, &c.Email,
+			&c.AccountNumber, &c.IsActive, &c.CreatedAt, &c.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("clients scan: %w", err)
+		}
+		clients = append(clients, c)
+	}
+	return &ClientPage{Clients: clients, Total: total, Limit: f.Limit, Offset: f.Offset}, nil
+}
+
 func (r *ClientRepo) GetAll(ctx context.Context) ([]domain.Client, error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT id, full_name, phone, email, account_number, is_active, created_at, updated_at

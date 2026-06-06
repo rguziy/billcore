@@ -57,10 +57,10 @@ function CalculationsContent() {
   const [newStatus, setNewStatus] = useState<CalculationStatus>("paid");
 
   useEffect(() => {
-    Promise.all([periodsApi.list(), clientsApi.list()])
-      .then(([p, c]) => {
+    Promise.all([periodsApi.list(), clientsApi.list({ limit: 1000 })])
+      .then(([p, cp]) => {
         setPeriods(p);
-        setClients(c);
+        setClients(cp.clients);
         // auto-select open period if no period in URL
         if (!searchParams.get("period_id") && p.length > 0) {
           const open = p.find((x) => x.status === "open") ?? p[0];

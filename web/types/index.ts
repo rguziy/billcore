@@ -8,6 +8,13 @@ export interface User {
   updated_at: string;
 }
 
+export interface ClientPage {
+  clients: Client[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface Client {
   id: number;
   full_name: string;

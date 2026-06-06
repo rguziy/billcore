@@ -52,7 +52,15 @@ export const usersApi = {
 
 // --- Clients ---
 export const clientsApi = {
-  list: () => request<Client[]>("/clients"),
+  list: (params?: { search?: string; status?: string; limit?: number; offset?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.search) qs.set("search", params.search);
+    if (params?.status) qs.set("status", params.status);
+    if (params?.limit)  qs.set("limit",  String(params.limit));
+    if (params?.offset) qs.set("offset", String(params.offset));
+    const q = qs.toString();
+    return request<ClientPage>(`/clients${q ? `?${q}` : ""}`);
+  },
   get: (id: number) => request<Client>(`/clients/${id}`),
   create: (data: Omit<Client, "id" | "created_at" | "updated_at" | "is_active">) =>
     request<Client>("/clients", { method: "POST", body: JSON.stringify(data) }),

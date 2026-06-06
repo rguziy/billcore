@@ -21,7 +21,7 @@ export default function LoginPage() {
     try {
       const res = await authApi.login(form.username, form.password);
       saveAuth(res.token, res.user);
-      router.push("/");
+      router.push("/clients");
     } catch (e: any) {
       setError(e.message);
     } finally {
