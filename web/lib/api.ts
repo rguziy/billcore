@@ -1,8 +1,14 @@
 const BASE = process.env.API_URL ?? "http://localhost:8080";
 
+function authHeaders(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const token = localStorage.getItem("billcore_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...init?.headers },
+    headers: { "Content-Type": "application/json", ...authHeaders(), ...init?.headers },
     ...init,
   });
   if (!res.ok) {
@@ -17,8 +23,32 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 import type {
   Client, Location, ClientBalance, Calculation, CalculationRow,
-  Service, Tariff, Subscription, Period, OpenPeriodResponse,
+  Service, Tariff, Subscription, Period, OpenPeriodResponse, User,
 } from "@/types";
+
+// --- Auth ---
+export const authApi = {
+  login: (username: string, password: string) =>
+    request<{ token: string; user: { id: number; username: string; email: string; role: "admin" | "operator" } }>(
+      "/auth/login", { method: "POST", body: JSON.stringify({ username, password }) }
+    ),
+  me: () => request<{ user_id: number; username: string; role: string }>("/auth/me"),
+};
+
+// --- Users ---
+export const usersApi = {
+  list: () => request<User[]>("/users"),
+  get: (id: number) => request<User>(`/users/${id}`),
+  create: (data: { username: string; email?: string; password: string; role: string }) =>
+    request<User>("/users", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: number, data: Partial<User>) =>
+    request<User>(`/users/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  block: (id: number) => request<void>(`/users/${id}/block`, { method: "PATCH" }),
+  unblock: (id: number) => request<void>(`/users/${id}/unblock`, { method: "PATCH" }),
+  changePassword: (id: number, password: string) =>
+    request<void>(`/users/${id}/password`, { method: "PATCH", body: JSON.stringify({ password }) }),
+  delete: (id: number) => request<void>(`/users/${id}`, { method: "DELETE" }),
+};
 
 // --- Clients ---
 export const clientsApi = {

@@ -12,6 +12,8 @@ import (
 
 func NewRouter(
 	jwtSecret string,
+	auth *handler.AuthHandler,
+	users *handler.UserHandler,
 	clients *handler.ClientHandler,
 	services *handler.ServiceHandler,
 	calculations *handler.CalculationHandler,
@@ -33,10 +35,31 @@ func NewRouter(
 		w.Write([]byte(`{"status":"ok"}`))
 	})
 
+	// Public routes
+	r.Post("/auth/login", auth.Login)
+
+	// Protected routes
 	r.Group(func(r chi.Router) {
 		if jwtSecret != "dev" {
 			r.Use(middleware.Auth(jwtSecret))
 		}
+
+		r.Get("/auth/me", auth.Me)
+
+		// Users — admin only
+		r.Group(func(r chi.Router) {
+			if jwtSecret != "dev" {
+				r.Use(middleware.RequireAdmin)
+			}
+			r.Get("/users", users.List)
+			r.Post("/users", users.Create)
+			r.Get("/users/{id}", users.Get)
+			r.Put("/users/{id}", users.Update)
+			r.Patch("/users/{id}/block", users.Block)
+			r.Patch("/users/{id}/unblock", users.Unblock)
+			r.Patch("/users/{id}/password", users.ChangePassword)
+			r.Delete("/users/{id}", users.Delete)
+		})
 
 		// Clients
 		r.Get("/clients", clients.List)

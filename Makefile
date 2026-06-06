@@ -45,10 +45,10 @@ web-install:
 	cd web && npm install
 
 web-dev:
-	cd web && npm run dev
+	cd web && npm install && npm run dev
 
 web-build:
-	cd web && npm run build
+	cd web && npm install && npm run build
 
 web-start:
 	cd web && npm run start

@@ -47,6 +47,7 @@ func main() {
 	slog.Info("database connected")
 
 	// Repositories
+	userRepo         := repository.NewUserRepo(pool)
 	clientRepo       := repository.NewClientRepo(pool)
 	serviceRepo      := repository.NewServiceRepo(pool)
 	subscriptionRepo := repository.NewSubscriptionRepo(pool)
@@ -54,10 +55,13 @@ func main() {
 	periodRepo       := repository.NewPeriodRepo(pool)
 
 	// Services
+	authSvc   := service.NewAuthService(userRepo, cfg.JWT.Secret)
 	reportSvc := service.NewReportService(pool)
 	periodSvc := service.NewPeriodService(pool, periodRepo, serviceRepo)
 
 	// Handlers
+	authHandler         := handler.NewAuthHandler(authSvc)
+	userHandler         := handler.NewUserHandler(userRepo)
 	clientHandler       := handler.NewClientHandler(clientRepo)
 	serviceHandler      := handler.NewServiceHandler(serviceRepo)
 	calcHandler         := handler.NewCalculationHandler(calcRepo, reportSvc)
@@ -66,6 +70,8 @@ func main() {
 
 	router := api.NewRouter(
 		cfg.JWT.Secret,
+		authHandler,
+		userHandler,
 		clientHandler,
 		serviceHandler,
 		calcHandler,
@@ -96,10 +102,8 @@ func main() {
 
 	<-quit
 	slog.Info("shutting down...")
-
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("shutdown", "err", err)
 	}
