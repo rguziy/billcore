@@ -38,18 +38,15 @@ func NewRouter(
 	// Public
 	r.Post("/auth/login", auth.Login)
 
+	// All routes below require authentication
 	r.Group(func(r chi.Router) {
-		if jwtSecret != "dev" {
-			r.Use(middleware.Auth(jwtSecret))
-		}
+		r.Use(middleware.Auth(jwtSecret))
 
 		r.Get("/auth/me", auth.Me)
 
-		// ── Admin only ──────────────────────────────────────────────
+		// ── Admin only ─────────────────────────────────────────────
 		r.Group(func(r chi.Router) {
-			if jwtSecret != "dev" {
-				r.Use(middleware.RequireAdmin)
-			}
+			r.Use(middleware.RequireAdmin)
 			r.Get("/users", users.List)
 			r.Post("/users", users.Create)
 			r.Get("/users/{id}", users.Get)
@@ -60,11 +57,9 @@ func NewRouter(
 			r.Delete("/users/{id}", users.Delete)
 		})
 
-		// ── Manager + Admin only ─────────────────────────────────────
+		// ── Manager + Admin only ────────────────────────────────────
 		r.Group(func(r chi.Router) {
-			if jwtSecret != "dev" {
-				r.Use(middleware.RequireManagerOrAbove)
-			}
+			r.Use(middleware.RequireManagerOrAbove)
 			// Services CRUD
 			r.Post("/services", services.Create)
 			r.Put("/services/{id}", services.Update)
@@ -78,12 +73,11 @@ func NewRouter(
 			r.Patch("/periods/{id}/close", periods.Close)
 			r.Patch("/periods/{id}/reopen", periods.Reopen)
 			r.Delete("/periods/{id}", periods.Delete)
+			// Statistics
+			r.Get("/statistics", calculations.GetStatistics)
 		})
 
-		// ── All authenticated roles ──────────────────────────────────
-
-		// Statistics (manager + admin)
-		r.Get("/statistics", calculations.GetStatistics)
+		// ── All authenticated roles ─────────────────────────────────
 
 		// Clients
 		r.Get("/clients", clients.List)
@@ -105,7 +99,7 @@ func NewRouter(
 		r.Get("/clients/{id}/pending", calculations.ListPending)
 		r.Get("/clients/{id}/paid", calculations.ListPaid)
 
-		// Services (read — all roles)
+		// Services (read only for operator)
 		r.Get("/services", services.List)
 		r.Get("/services/{id}/tariffs", services.ListTariffs)
 
@@ -118,7 +112,7 @@ func NewRouter(
 		r.Delete("/subscriptions/{id}", subscriptions.Delete)
 		r.Get("/subscriptions/{id}/calculations", calculations.ListBySubscription)
 
-		// Periods (read — all roles)
+		// Periods (read only for operator)
 		r.Get("/periods", periods.List)
 		r.Get("/periods/{id}", periods.Get)
 

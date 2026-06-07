@@ -45,7 +45,8 @@ function NavGroup({ title, items, pathname, role }: {
       {title && (
         <div style={{
           fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.08em",
-          color: "#475569", padding: "1rem 1.25rem 0.25rem", marginTop: "0.5rem",
+          color: "#475569", padding: "0.75rem 1.25rem 0.25rem", marginTop: "0.25rem",
+          borderTop: "1px solid #1e293b",
         }}>
           {title}
         </div>
@@ -83,7 +84,12 @@ export default function Sidebar() {
       <div className="brand">Bill<span>Core</span></div>
       <ul className="nav flex-column mt-2 flex-grow-1">
 
-        <NavGroup items={operatorNav} pathname={pathname} role={role} />
+        <NavGroup
+          title="Operations"
+          items={operatorNav}
+          pathname={pathname}
+          role={role}
+        />
 
         <NavGroup
           title="Management"
