@@ -31,7 +31,7 @@ func (r *CalculationRepo) GetByPeriod(ctx context.Context, periodID int) ([]doma
 	return scanCalculations(rows)
 }
 
-func (r *CalculationRepo) GetRowsByPeriod(ctx context.Context, periodID int, clientID *int) ([]domain.CalculationRow, error) {
+func (r *CalculationRepo) GetRowsByPeriod(ctx context.Context, periodID int, clientID *int, locationID *int) ([]domain.CalculationRow, error) {
 	query := `
 		SELECT c.id, c.subscription_id, c.period_id, c.tariff_id,
 		       c.reading_prev, c.reading_curr, c.quantity, c.amount,
@@ -45,9 +45,17 @@ func (r *CalculationRepo) GetRowsByPeriod(ctx context.Context, periodID int, cli
 		WHERE c.period_id = $1
 	`
 	args := []any{periodID}
+	i := 2
+
 	if clientID != nil {
-		query += ` AND l.client_id = $2`
+		query += fmt.Sprintf(` AND l.client_id = $%d`, i)
 		args = append(args, *clientID)
+		i++
+	}
+	if locationID != nil {
+		query += fmt.Sprintf(` AND l.id = $%d`, i)
+		args = append(args, *locationID)
+		i++
 	}
 	query += ` ORDER BY sv.name, l.name`
 

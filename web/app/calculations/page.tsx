@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { periodsApi, calculationsApi, clientsApi, subscriptionsApi, servicesApi } from "@/lib/api";
-import type { CalculationRow, Period, Client, CalculationStatus } from "@/types";
+import type { CalculationRow, Period, Client, Location, CalculationStatus } from "@/types";
 import Alert from "@/app/_components/Alert";
 import Modal from "@/app/_components/Modal";
 
@@ -17,15 +17,17 @@ function CalculationsContent() {
   const searchParams = useSearchParams();
   const router       = useRouter();
 
-  const [periods, setPeriods] = useState<Period[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [calcs, setCalcs]     = useState<CalculationRow[]>([]);
-  const [error, setError]     = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [periods, setPeriods]     = useState<Period[]>([]);
+  const [clients, setClients]     = useState<Client[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [calcs, setCalcs]         = useState<CalculationRow[]>([]);
+  const [error, setError]         = useState<string | null>(null);
+  const [loading, setLoading]     = useState(false);
   const [currentPeriod, setCurrentPeriod] = useState<Period | null>(null);
 
-  const periodId = searchParams.get("period_id") ? Number(searchParams.get("period_id")) : "";
-  const clientId = searchParams.get("client_id") ? Number(searchParams.get("client_id")) : "";
+  const periodId   = searchParams.get("period_id")   ? Number(searchParams.get("period_id"))   : "";
+  const clientId   = searchParams.get("client_id")   ? Number(searchParams.get("client_id"))   : "";
+  const locationId = searchParams.get("location_id") ? Number(searchParams.get("location_id")) : "";
 
   // edit modal
   const [editCalc, setEditCalc] = useState<CalculationRow | null>(null);
@@ -72,27 +74,42 @@ function CalculationsContent() {
       .catch((e) => setError(e.message));
   }, []);
 
+  // load locations when client changes
+  useEffect(() => {
+    if (!clientId) { setLocations([]); return; }
+    clientsApi.listLocations(Number(clientId)).then(setLocations).catch((e) => setError(e.message));
+  }, [clientId]);
+
   useEffect(() => {
     if (!periodId) { setCalcs([]); setCurrentPeriod(null); return; }
     const cp = periods.find((p) => p.id === periodId) ?? null;
     setCurrentPeriod(cp);
     setLoading(true);
-    periodsApi.getCalculations(Number(periodId), clientId ? Number(clientId) : undefined)
+    periodsApi.getCalculations(
+      Number(periodId),
+      clientId   ? Number(clientId)   : undefined,
+      locationId ? Number(locationId) : undefined,
+    )
       .then(setCalcs)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [periodId, clientId, periods]);
+  }, [periodId, clientId, locationId, periods]);
 
   const setParam = (key: string, val: string | number | "") => {
     const p = new URLSearchParams(searchParams.toString());
     if (val === "") p.delete(key); else p.set(key, String(val));
+    // reset location when client changes
+    if (key === "client_id") p.delete("location_id");
     router.push(`/calculations?${p.toString()}`);
   };
 
   const reload = () => {
     if (!periodId) return;
-    periodsApi.getCalculations(Number(periodId), clientId ? Number(clientId) : undefined)
-      .then(setCalcs).catch((e) => setError(e.message));
+    periodsApi.getCalculations(
+      Number(periodId),
+      clientId   ? Number(clientId)   : undefined,
+      locationId ? Number(locationId) : undefined,
+    ).then(setCalcs).catch((e) => setError(e.message));
   };
 
   // Load subscriptions for create modal — exclude those already in calculations for this period
@@ -237,7 +254,7 @@ function CalculationsContent() {
               ))}
             </select>
           </div>
-          <div className="col-md-4">
+          <div className="col-md-3">
             <label className="form-label">Client</label>
             <select className="form-select" value={clientId}
               onChange={(e) => setParam("client_id", e.target.value)}>
@@ -247,6 +264,18 @@ function CalculationsContent() {
               ))}
             </select>
           </div>
+          {clientId && locations.length > 0 && (
+            <div className="col-md-3">
+              <label className="form-label">Location</label>
+              <select className="form-select" value={locationId}
+                onChange={(e) => setParam("location_id", e.target.value)}>
+                <option value="">— all locations —</option>
+                {locations.map((l) => (
+                  <option key={l.id} value={l.id}>{l.name}{l.address ? ` (${l.address})` : ""}</option>
+                ))}
+              </select>
+            </div>
+          )}
           {calcs.length > 0 && (
             <div className="col-12 mt-2">
               <div className="d-flex gap-4">

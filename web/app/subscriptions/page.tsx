@@ -62,13 +62,18 @@ function SubscriptionsContent() {
 
   const clientMap   = Object.fromEntries(clients.map((c) => [c.id, c]));
   const serviceMap  = Object.fromEntries(services.map((s) => [s.id, s]));
+  const locationMap = Object.fromEntries(locations.map((l) => [l.id, l]));
 
-  const filtered = filterClient
-    ? subs.filter((s) => {
-        // we don't have client_id directly on subscription — filter client-side via location
-        return locations.some((l) => l.id === s.location_id);
-      })
-    : subs;
+  const [filterLocation, setFilterLocation] = useState<number | "">("");
+
+  // reset location filter when client changes
+  useEffect(() => { setFilterLocation(""); }, [filterClient]);
+
+  const filtered = subs.filter((s) => {
+    if (filterClient && !locations.some((l) => l.id === s.location_id)) return false;
+    if (filterLocation && s.location_id !== filterLocation) return false;
+    return true;
+  });
 
   const create = async () => {
     try {
@@ -129,6 +134,18 @@ function SubscriptionsContent() {
               ))}
             </select>
           </div>
+          {filterClient && locations.length > 0 && (
+            <div className="col-md-4">
+              <label className="form-label">Filter by location</label>
+              <select className="form-select" value={filterLocation}
+                onChange={(e) => setFilterLocation(e.target.value ? Number(e.target.value) : "")}>
+                <option value="">— all locations —</option>
+                {locations.map((l) => (
+                  <option key={l.id} value={l.id}>{l.name}{l.address ? ` (${l.address})` : ""}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
@@ -156,7 +173,7 @@ function SubscriptionsContent() {
               {filtered.map((s) => (
                 <tr key={s.id}>
                   <td className="ps-3 fw-semibold">{serviceMap[s.service_id]?.name ?? `#${s.service_id}`}</td>
-                  <td>{s.location_id}</td>
+                  <td>{locationMap[s.location_id]?.name ?? `#${s.location_id}`}</td>
                   <td>{s.meter_number ? <code>{s.meter_number}</code> : "—"}</td>
                   <td>{new Date(s.connected_at).toLocaleDateString()}</td>
                   <td>

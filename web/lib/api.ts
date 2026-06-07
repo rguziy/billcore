@@ -127,9 +127,12 @@ export const periodsApi = {
   close: (id: number) => request<void>(`/periods/${id}/close`, { method: "PATCH" }),
   reopen: (id: number) => request<void>(`/periods/${id}/reopen`, { method: "PATCH" }),
   delete: (id: number) => request<void>(`/periods/${id}`, { method: "DELETE" }),
-  getCalculations: (periodId: number, clientId?: number) => {
-    const qs = clientId ? `?client_id=${clientId}` : "";
-    return request<CalculationRow[]>(`/periods/${periodId}/calculations${qs}`);
+  getCalculations: (periodId: number, clientId?: number, locationId?: number) => {
+    const qs = new URLSearchParams();
+    if (clientId)   qs.set("client_id",   String(clientId));
+    if (locationId) qs.set("location_id", String(locationId));
+    const q = qs.toString();
+    return request<CalculationRow[]>(`/periods/${periodId}/calculations${q ? `?${q}` : ""}`);
   },
 };
 

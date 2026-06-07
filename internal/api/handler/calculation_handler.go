@@ -121,7 +121,17 @@ func (h *CalculationHandler) GetByPeriod(w http.ResponseWriter, r *http.Request)
 		clientID = &id
 	}
 
-	rows, err := h.repo.GetRowsByPeriod(r.Context(), periodID, clientID)
+	var locationID *int
+	if s := r.URL.Query().Get("location_id"); s != "" {
+		var id int
+		if _, err := fmt.Sscan(s, &id); err != nil {
+			writeError(w, err, http.StatusBadRequest)
+			return
+		}
+		locationID = &id
+	}
+
+	rows, err := h.repo.GetRowsByPeriod(r.Context(), periodID, clientID, locationID)
 	if err != nil {
 		writeError(w, err, http.StatusInternalServerError)
 		return
