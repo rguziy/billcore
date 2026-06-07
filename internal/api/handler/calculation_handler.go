@@ -245,6 +245,15 @@ func (h *CalculationHandler) ListPaid(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, rows)
 }
 
+func (h *CalculationHandler) GetStatistics(w http.ResponseWriter, r *http.Request) {
+	stats, err := h.reportService.GetStatistics(r.Context())
+	if err != nil {
+		writeError(w, err, http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, stats)
+}
+
 func (h *CalculationHandler) ClientBalance(w http.ResponseWriter, r *http.Request) {
 	clientID, err := pathID(r, "id")
 	if err != nil {

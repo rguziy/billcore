@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/api";
-import { saveAuth } from "@/lib/auth";
+import { saveAuth, defaultPath } from "@/lib/auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,7 +21,7 @@ export default function LoginPage() {
     try {
       const res = await authApi.login(form.username, form.password);
       saveAuth(res.token, res.user);
-      router.push("/clients");
+      router.push(defaultPath());
     } catch (e: any) {
       setError(e.message);
     } finally {

@@ -136,6 +136,23 @@ export const periodsApi = {
   },
 };
 
+// --- Statistics ---
+export const statisticsApi = {
+  get: () => request<{
+    clients: { total: number; active: number; inactive: number };
+    users: { total: number; admins: number; managers: number; operators: number };
+    services: { total: number; without_tariff: number };
+    current_period?: {
+      period_id: number;
+      period_start: string;
+      accrued: number;
+      paid: number;
+      pending: number;
+      cancelled: number;
+    };
+  }>("/statistics"),
+};
+
 // --- Calculations ---
 export const calculationsApi = {
   listBySubscription: (subscriptionId: number) =>

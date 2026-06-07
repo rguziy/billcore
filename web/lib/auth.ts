@@ -5,7 +5,7 @@ export interface AuthUser {
   id: number;
   username: string;
   email?: string;
-  role: "admin" | "operator";
+  role: "admin" | "manager" | "operator";
 }
 
 export function saveAuth(token: string, user: AuthUser) {
@@ -34,4 +34,20 @@ export function clearAuth() {
 
 export function isAdmin(): boolean {
   return getUser()?.role === "admin";
+}
+
+export function isManager(): boolean {
+  return getUser()?.role === "manager";
+}
+
+export function isManagerOrAbove(): boolean {
+  const role = getUser()?.role;
+  return role === "admin" || role === "manager";
+}
+
+export function defaultPath(): string {
+  const role = getUser()?.role;
+  if (role === "admin")   return "/users";
+  if (role === "manager") return "/statistics";
+  return "/clients";
 }

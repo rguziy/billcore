@@ -80,7 +80,11 @@ export default function UsersPage() {
     } catch (e: any) { setError(e.message); }
   };
 
-  const roleColor = { admin: "#7c3aed", operator: "#0891b2" };
+  const roleColor: Record<string, string> = {
+    admin:    "#7c3aed",
+    manager:  "#0891b2",
+    operator: "#059669",
+  };
 
   return (
     <>
@@ -180,6 +184,7 @@ export default function UsersPage() {
           <select className="form-select" value={createForm.role}
             onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}>
             <option value="operator">Operator</option>
+            <option value="manager">Manager</option>
             <option value="admin">Admin</option>
           </select>
         </div>
@@ -202,6 +207,7 @@ export default function UsersPage() {
           <select className="form-select" value={editForm.role}
             onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}>
             <option value="operator">Operator</option>
+            <option value="manager">Manager</option>
             <option value="admin">Admin</option>
           </select>
         </div>

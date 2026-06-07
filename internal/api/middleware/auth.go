@@ -53,6 +53,18 @@ func RequireAdmin(next http.Handler) http.Handler {
 	})
 }
 
+// RequireManagerOrAbove allows manager and admin, blocks operator.
+func RequireManagerOrAbove(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		role, _ := r.Context().Value(ContextRole).(domain.UserRole)
+		if role != domain.RoleAdmin && role != domain.RoleManager {
+			http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // UserIDFromContext extracts the authenticated user ID.
 func UserIDFromContext(ctx context.Context) *int {
 	id, ok := ctx.Value(ContextUserID).(int)

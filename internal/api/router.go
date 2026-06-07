@@ -35,10 +35,9 @@ func NewRouter(
 		w.Write([]byte(`{"status":"ok"}`))
 	})
 
-	// Public routes
+	// Public
 	r.Post("/auth/login", auth.Login)
 
-	// Protected routes
 	r.Group(func(r chi.Router) {
 		if jwtSecret != "dev" {
 			r.Use(middleware.Auth(jwtSecret))
@@ -46,7 +45,7 @@ func NewRouter(
 
 		r.Get("/auth/me", auth.Me)
 
-		// Users — admin only
+		// ── Admin only ──────────────────────────────────────────────
 		r.Group(func(r chi.Router) {
 			if jwtSecret != "dev" {
 				r.Use(middleware.RequireAdmin)
@@ -60,6 +59,31 @@ func NewRouter(
 			r.Patch("/users/{id}/password", users.ChangePassword)
 			r.Delete("/users/{id}", users.Delete)
 		})
+
+		// ── Manager + Admin only ─────────────────────────────────────
+		r.Group(func(r chi.Router) {
+			if jwtSecret != "dev" {
+				r.Use(middleware.RequireManagerOrAbove)
+			}
+			// Services CRUD
+			r.Post("/services", services.Create)
+			r.Put("/services/{id}", services.Update)
+			r.Delete("/services/{id}", services.Delete)
+			// Tariffs CRUD
+			r.Post("/services/{id}/tariffs", services.CreateTariff)
+			r.Put("/tariffs/{id}", services.UpdateTariff)
+			r.Delete("/tariffs/{id}", services.DeleteTariff)
+			// Periods management
+			r.Post("/periods/open", periods.Open)
+			r.Patch("/periods/{id}/close", periods.Close)
+			r.Patch("/periods/{id}/reopen", periods.Reopen)
+			r.Delete("/periods/{id}", periods.Delete)
+		})
+
+		// ── All authenticated roles ──────────────────────────────────
+
+		// Statistics (manager + admin)
+		r.Get("/statistics", calculations.GetStatistics)
 
 		// Clients
 		r.Get("/clients", clients.List)
@@ -81,17 +105,9 @@ func NewRouter(
 		r.Get("/clients/{id}/pending", calculations.ListPending)
 		r.Get("/clients/{id}/paid", calculations.ListPaid)
 
-		// Services
+		// Services (read — all roles)
 		r.Get("/services", services.List)
-		r.Post("/services", services.Create)
-		r.Put("/services/{id}", services.Update)
-		r.Delete("/services/{id}", services.Delete)
-
-		// Tariffs
 		r.Get("/services/{id}/tariffs", services.ListTariffs)
-		r.Post("/services/{id}/tariffs", services.CreateTariff)
-		r.Put("/tariffs/{id}", services.UpdateTariff)
-		r.Delete("/tariffs/{id}", services.DeleteTariff)
 
 		// Subscriptions
 		r.Get("/subscriptions", subscriptions.ListAll)
@@ -102,13 +118,9 @@ func NewRouter(
 		r.Delete("/subscriptions/{id}", subscriptions.Delete)
 		r.Get("/subscriptions/{id}/calculations", calculations.ListBySubscription)
 
-		// Periods
+		// Periods (read — all roles)
 		r.Get("/periods", periods.List)
 		r.Get("/periods/{id}", periods.Get)
-		r.Post("/periods/open", periods.Open)
-		r.Patch("/periods/{id}/close", periods.Close)
-		r.Patch("/periods/{id}/reopen", periods.Reopen)
-		r.Delete("/periods/{id}", periods.Delete)
 
 		// Calculations
 		r.Get("/periods/{id}/calculations", calculations.GetByPeriod)

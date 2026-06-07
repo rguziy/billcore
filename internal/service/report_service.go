@@ -76,3 +76,97 @@ func (s *ReportService) GetLatestReadings(ctx context.Context, clientID int) ([]
 	}
 	return result, nil
 }
+
+// Statistics holds system-wide metrics for the dashboard.
+type Statistics struct {
+	Clients struct {
+		Total    int `json:"total"`
+		Active   int `json:"active"`
+		Inactive int `json:"inactive"`
+	} `json:"clients"`
+	Users struct {
+		Total     int `json:"total"`
+		Admins    int `json:"admins"`
+		Managers  int `json:"managers"`
+		Operators int `json:"operators"`
+	} `json:"users"`
+	Services struct {
+		Total          int `json:"total"`
+		WithoutTariff  int `json:"without_tariff"`
+	} `json:"services"`
+	CurrentPeriod *PeriodStats `json:"current_period,omitempty"`
+}
+
+type PeriodStats struct {
+	PeriodID    int     `json:"period_id"`
+	PeriodStart string  `json:"period_start"`
+	Accrued     float64 `json:"accrued"`
+	Paid        float64 `json:"paid"`
+	Pending     float64 `json:"pending"`
+	Cancelled   float64 `json:"cancelled"`
+}
+
+func (s *ReportService) GetStatistics(ctx context.Context) (*Statistics, error) {
+	stats := &Statistics{}
+
+	// Clients
+	if err := s.db.QueryRow(ctx, `
+		SELECT
+			COUNT(*),
+			COUNT(*) FILTER (WHERE is_active = TRUE),
+			COUNT(*) FILTER (WHERE is_active = FALSE)
+		FROM billcore.clients
+	`).Scan(&stats.Clients.Total, &stats.Clients.Active, &stats.Clients.Inactive); err != nil {
+		return nil, fmt.Errorf("stats clients: %w", err)
+	}
+
+	// Users
+	if err := s.db.QueryRow(ctx, `
+		SELECT
+			COUNT(*),
+			COUNT(*) FILTER (WHERE role = 'admin'),
+			COUNT(*) FILTER (WHERE role = 'manager'),
+			COUNT(*) FILTER (WHERE role = 'operator')
+		FROM billcore.users
+	`).Scan(&stats.Users.Total, &stats.Users.Admins, &stats.Users.Managers, &stats.Users.Operators); err != nil {
+		return nil, fmt.Errorf("stats users: %w", err)
+	}
+
+	// Services
+	if err := s.db.QueryRow(ctx, `
+		SELECT
+			COUNT(*),
+			COUNT(*) FILTER (WHERE id NOT IN (
+				SELECT service_id FROM billcore.tariffs WHERE valid_to IS NULL
+			))
+		FROM billcore.services
+	`).Scan(&stats.Services.Total, &stats.Services.WithoutTariff); err != nil {
+		return nil, fmt.Errorf("stats services: %w", err)
+	}
+
+	// Current period (most recent open, or last closed)
+	var ps PeriodStats
+	var periodStart interface{}
+	err := s.db.QueryRow(ctx, `
+		SELECT
+			p.id,
+			p.period_start,
+			COALESCE(SUM(c.amount), 0),
+			COALESCE(SUM(c.amount) FILTER (WHERE c.status = 'paid'), 0),
+			COALESCE(SUM(c.amount) FILTER (WHERE c.status = 'pending'), 0),
+			COALESCE(SUM(c.amount) FILTER (WHERE c.status = 'cancelled'), 0)
+		FROM billcore.periods p
+		LEFT JOIN billcore.calculations c ON c.period_id = p.id
+		GROUP BY p.id, p.period_start
+		ORDER BY p.period_start DESC
+		LIMIT 1
+	`).Scan(&ps.PeriodID, &periodStart, &ps.Accrued, &ps.Paid, &ps.Pending, &ps.Cancelled)
+	if err == nil {
+		if t, ok := periodStart.(interface{ Format(string) string }); ok {
+			ps.PeriodStart = t.Format("2006-01-02")
+		}
+		stats.CurrentPeriod = &ps
+	}
+
+	return stats, nil
+}
