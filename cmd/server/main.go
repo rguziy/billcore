@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"embed"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -19,9 +22,16 @@ import (
 	"github.com/rguziy/billcore/internal/service"
 )
 
+// Version is set at build time via -ldflags "-X main.Version=v0.1.0"
+var Version = "dev"
+
+//go:embed web/out
+var staticFiles embed.FS
+
 func main() {
-	// Load .env (ignore error in production where env vars are set directly)
 	_ = godotenv.Load()
+
+	slog.Info("starting BillCore", "version", Version)
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -29,14 +39,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Run migrations before opening the pool
 	if err := db.RunMigrations(cfg.DB.DSN()); err != nil {
 		slog.Error("migrations", "err", err)
 		os.Exit(1)
 	}
 	slog.Info("migrations applied")
 
-	// Database pool
 	ctx := context.Background()
 	pool, err := db.NewPool(ctx, cfg.DB.DSN())
 	if err != nil {
@@ -68,7 +76,7 @@ func main() {
 	subscriptionHandler := handler.NewSubscriptionHandler(subscriptionRepo)
 	periodHandler       := handler.NewPeriodHandler(periodRepo, periodSvc)
 
-	router := api.NewRouter(
+	apiRouter := api.NewRouter(
 		cfg.JWT.Secret,
 		authHandler,
 		userHandler,
@@ -79,21 +87,47 @@ func main() {
 		periodHandler,
 	)
 
-	// HTTP server
+	// Root mux: /api/* → API handlers, / → static files
+	mux := http.NewServeMux()
+
+	// API routes (strip /api prefix before passing to chi router)
+	mux.Handle("/api/", http.StripPrefix("/api", apiRouter))
+
+	// Version endpoint (public)
+	mux.HandleFunc("/version", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"version":%q}`, Version)
+	})
+
+	// Static files from embedded web/out
+	webFS, err := fs.Sub(staticFiles, "web/out")
+	if err != nil {
+		slog.Error("static files", "err", err)
+		os.Exit(1)
+	}
+	fileServer := http.FileServer(http.FS(webFS))
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// SPA fallback: serve index.html for unknown non-file paths
+		path := r.URL.Path
+		if path != "/" && !strings.Contains(path, ".") {
+			r.URL.Path = "/"
+		}
+		fileServer.ServeHTTP(w, r)
+	})
+
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%s", cfg.Server.Port),
-		Handler:      router,
+		Handler:      mux,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		slog.Info("server started", "port", cfg.Server.Port)
+		slog.Info("server started", "port", cfg.Server.Port, "version", Version)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			slog.Error("server", "err", err)
 			os.Exit(1)

@@ -24,9 +24,13 @@ bin/
 # testing
 /web/coverage
 
-# next.js
+# next.js build output (embedded into Go binary)
 /web/.next/
 /web/out/
+# keep the placeholder for go:embed to work locally
+!/cmd/server/web/out/
+/cmd/server/web/out/*
+!/cmd/server/web/out/index.html
 
 # production
 /web/build

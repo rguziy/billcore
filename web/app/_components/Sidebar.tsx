@@ -72,10 +72,14 @@ function NavGroup({ title, items, pathname, role }: {
 export default function Sidebar() {
   const pathname = usePathname();
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => { setUser(getUser()); }, [pathname]);
+  useEffect(() => { setMounted(true); setUser(getUser()); }, [pathname]);
 
-  if (pathname === "/login") return null;
+  // Hide on login page — before any other check
+  if (pathname === "/login" || pathname === "/login/") return null;
+
+  if (!mounted) return <nav className="bc-sidebar" style={{ width: 240 }} />;
 
   const role: Role = (user?.role as Role) ?? "operator";
 
@@ -106,9 +110,6 @@ export default function Sidebar() {
         />
 
       </ul>
-      <div className="px-3 pb-3" style={{ fontSize: "0.75rem", color: "#475569" }}>
-        v0.2.0
-      </div>
     </nav>
   );
 }

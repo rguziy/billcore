@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+
 import { clientsApi, subscriptionsApi, servicesApi } from "@/lib/api";
 import type { Client, Location, ClientBalance, CalculationRow, Subscription, Service } from "@/types";
 import Modal from "@/app/_components/Modal";
 import Alert from "@/app/_components/Alert";
 import Link from "next/link";
 
-export default function ClientDetailPage() {
-  const { id } = useParams<{ id: string }>();
+function ClientDetailContent() {
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id") ?? "";
   const clientId = Number(id);
 
   const [client, setClient] = useState<Client | null>(null);
@@ -417,5 +419,14 @@ export default function ClientDetailPage() {
       </Modal>
 
     </>
+  );
+}
+
+
+export default function ClientDetailPage() {
+  return (
+    <Suspense fallback={<div className="p-4 text-center text-muted">Loading...</div>}>
+      <ClientDetailContent />
+    </Suspense>
   );
 }

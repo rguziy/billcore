@@ -13,29 +13,25 @@
 
 ```
 billcore/
-├── cmd/server/              # entry point, graceful shutdown
+├── cmd/server/              # Go entry point — serves API + embedded Next.js static files
+│   └── web/out/             # Placeholder (replaced by make web-build or Docker)
 ├── internal/
-│   ├── config/              # env config
+│   ├── config/              # Env config
 │   ├── db/                  # pgx pool, migration runner
-│   ├── domain/              # domain structs (no dependencies)
+│   ├── domain/              # Domain structs (no dependencies)
 │   ├── migrations/
-│   │   ├── embed.go         # embeds SQL files into the binary
-│   │   └── sql/             # migration files
+│   │   ├── embed.go         # Embeds SQL files into binary
+│   │   └── sql/             # Migration files (000001…)
 │   ├── repository/          # SQL queries
-│   ├── service/             # business logic
+│   ├── service/             # Business logic
 │   └── api/                 # HTTP router, middleware, handlers
-├── web/                     # Next.js 15 frontend
-│   ├── app/
-│   │   ├── clients/         # clients CRUD + detail view
-│   │   ├── services/        # services + tariffs
-│   │   ├── calculations/    # accruals management
-│   │   ├── payments/        # payment history
-│   │   └── _components/     # shared UI components
-│   ├── lib/api.ts           # typed API client
-│   └── types/index.ts       # domain types
-├── .env.example
+├── web/                     # Next.js 15 frontend (static export)
+│   ├── app/                 # App router pages
+│   ├── lib/                 # API client, auth helpers
+│   └── types/               # Domain TypeScript types
+├── VERSION                  # Single source of version (e.g. v0.1.0)
+├── Dockerfile               # Multi-stage: Node → Go → Alpine
 ├── docker-compose.yml
-├── Dockerfile
 ├── Makefile
 └── README.md
 ```
@@ -44,59 +40,54 @@ billcore/
 
 ## ⚙️ Tech stack
 
-| Layer      | Technology                          |
-|------------|-------------------------------------|
-| Database   | PostgreSQL 16                       |
-| Backend    | Go 1.22, Chi router, pgx/v5         |
-| Migrations | golang-migrate                      |
-| Frontend   | Next.js 15, React 19, Bootstrap 5   |
+| Layer      | Technology                                |
+|------------|-------------------------------------------|
+| Database   | PostgreSQL 16                             |
+| Backend    | Go 1.22, Chi router, pgx/v5, bcrypt       |
+| Migrations | golang-migrate (embedded in binary)       |
+| Frontend   | Next.js 15 (static export), Bootstrap 5  |
+| Auth       | JWT (HS256), role-based (admin/manager/operator) |
 
 ---
 
-## 🚀 Getting started
+## 👥 Roles
 
-### 1. Clone the repo
+| Feature                        | Operator | Manager | Admin |
+|-------------------------------|----------|---------|-------|
+| Clients, Locations, Subscriptions, Calculations | ✅ | ✅ | ✅ |
+| Statistics                    | ❌       | ✅      | ✅    |
+| Services, Tariffs (CRUD)      | 👁 read  | ✅      | ✅    |
+| Periods (open/close)          | 👁 read  | ✅      | ✅    |
+| Users (CRUD)                  | ❌       | ❌      | ✅    |
+
+Default pages after login: **Operator** → `/clients`, **Manager** → `/statistics`, **Admin** → `/users`
+
+---
+
+## 🚀 Getting started (local development)
+
+### 1. Clone
 
 ```bash
 git clone https://github.com/rguziy/billcore.git
 cd billcore
 ```
 
-### 2. Copy env file and edit
+### 2. Configure environment
 
 ```bash
 cp .env.example .env
-```
+# Edit DB credentials and JWT_SECRET (use: openssl rand -hex 32)
 
-Edit `.env` with your database credentials and JWT secret:
-
-```env
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=billcore
-DB_PASSWORD=secret
-DB_NAME=billcore
-SERVER_PORT=8080
-JWT_SECRET=change-me-in-production
+cp web/.env.local.example web/.env.local
+# NEXT_PUBLIC_API_URL=http://localhost:8080
 ```
 
 ### 3. Install golang-migrate
 
 ```bash
 go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-```
-
-Add Go binaries to your PATH (add to `~/.bashrc` or `~/.profile`):
-
-```bash
 export PATH=$PATH:~/go/bin
-source ~/.bashrc
-```
-
-Verify:
-
-```bash
-migrate -version
 ```
 
 ### 4. Start PostgreSQL
@@ -105,70 +96,96 @@ migrate -version
 make docker-up
 ```
 
-Or use an existing PostgreSQL instance — just update `.env` accordingly.
-
 ### 5. Run migrations
 
 ```bash
 make migrate-up
 ```
 
-### 6. Start the API server
+### 6. Start API + frontend (two terminals or simultaneously)
 
 ```bash
-make run
-```
-
-### 7. Start the frontend
-
-```bash
-cd web
-cp .env.local.example .env.local
-npm install
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-To run API and frontend simultaneously:
-
-```bash
+# Option A: simultaneously
 make dev
+
+# Option B: separately
+make run          # Go API on :8080
+make web-dev      # Next.js on :3000
+```
+
+Open [http://localhost:3000](http://localhost:3000)
+
+Default credentials: `admin / admin`, `manager / manager`
+
+---
+
+## 🐳 Docker (production)
+
+### Build image
+
+```bash
+make docker-build
+# builds billcore:v0.1.0 and billcore:latest
+```
+
+This creates a **single image** containing:
+- Go binary (API + migrations)
+- Next.js static files (embedded via `go:embed`)
+
+Everything runs on **one port (:8080)**.
+
+### Run with Docker Compose
+
+```bash
+# Copy and edit .env
+cp .env.example .env
+
+make docker-up
+```
+
+Open [http://localhost:8080](http://localhost:8080)
+
+---
+
+## 📦 Versioning & release
+
+Version is stored in `VERSION` file and propagated to:
+- Go binary (`-ldflags "-X main.Version=..."`)
+- Next.js build (`NEXT_PUBLIC_VERSION`)
+- Docker image tag
+
+### Create a release
+
+```bash
+make release V=v0.2.0
+# Updates VERSION, package.json, commits, tags
+
+git push && git push --tags
 ```
 
 ---
 
-## 🗃️ Database migrations
+## 🗃️ Migrations
 
 ```bash
-make migrate-up           # apply all pending migrations
-make migrate-down         # rollback last migration
-make migrate-create       # create a new migration (prompts for name)
+make migrate-up           # Apply all pending migrations
+make migrate-down         # Rollback last migration
+make migrate-create       # Create new migration (prompts for name)
 ```
 
-### ⚠️ Dirty database state
+### Dirty database state
 
-If a migration fails midway, the database may be left in a dirty state.
-You will see an error like:
-
-```
-error: Dirty database version 1. Fix and force version.
-```
-
-To recover, force the version to the last known good state and re-run:
+If a migration fails midway:
 
 ```bash
-# force version to 0 (before any migrations)
-make migrate-force V=0
-
-# or force to a specific version if some migrations already succeeded
+# Force version to last known good state
 make migrate-force V=1
 
-# then re-apply
+# Then re-apply
 make migrate-up
 ```
 
-To wipe the database and start fresh:
+To wipe and start fresh:
 
 ```bash
 psql "postgres://billcore:secret@localhost:5432/billcore" \
@@ -182,21 +199,21 @@ make migrate-up
 
 ## 🛠️ Makefile reference
 
-| Command               | Description                          |
-|-----------------------|--------------------------------------|
-| `make run`            | Start the Go API server              |
-| `make build`          | Build binary to `bin/billcore`       |
-| `make test`           | Run all tests                        |
-| `make migrate-up`     | Apply all pending migrations         |
-| `make migrate-down`   | Rollback last migration              |
-| `make migrate-force`  | Force migration version (`V=n`)      |
-| `make migrate-create` | Create new migration file            |
-| `make web-install`    | Install frontend dependencies        |
-| `make web-dev`        | Start Next.js dev server             |
-| `make web-build`      | Build frontend for production        |
-| `make dev`            | Run API + frontend simultaneously    |
-| `make docker-up`      | Start PostgreSQL via Docker Compose  |
-| `make docker-down`    | Stop Docker Compose services         |
+| Command               | Description                                        |
+|-----------------------|----------------------------------------------------|
+| `make run`            | Start Go API server (dev)                          |
+| `make build`          | Build Go binary to `bin/billcore`                  |
+| `make web-dev`        | Start Next.js dev server on :3000                  |
+| `make web-build`      | Build Next.js static export → `cmd/server/web/out` |
+| `make dev`            | Run API + Next.js simultaneously                   |
+| `make migrate-up`     | Apply all pending migrations                       |
+| `make migrate-down`   | Rollback last migration                            |
+| `make migrate-force`  | Force migration version (`V=n`)                    |
+| `make migrate-create` | Create new migration file                          |
+| `make docker-build`   | Build production Docker image                      |
+| `make docker-up`      | Start services via Docker Compose                  |
+| `make docker-down`    | Stop Docker Compose services                       |
+| `make release`        | Tag new release (`V=v0.x.0`)                       |
 
 ---
 

@@ -1,30 +1,29 @@
 include .env
 export
 
-MIGRATE := $(HOME)/go/bin/migrate
+VERSION    := $(shell cat VERSION)
+MIGRATE    := $(HOME)/go/bin/migrate
 MIGRATE_PATH := ./internal/migrations/sql
-DB_URL := postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
+DB_URL     := postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
+LDFLAGS    := -ldflags "-X main.Version=$(VERSION)"
+IMAGE_NAME := billcore
 
-.PHONY: run build test lint \
-        migrate-up migrate-down migrate-force migrate-create \
+.PHONY: run build test migrate-up migrate-down migrate-force migrate-create \
         web-install web-dev web-build web-start \
-        docker-up docker-down dev
+        docker-build docker-up docker-down dev release
 
-# --- Go API ---
+# ── Go ──────────────────────────────────────────────────────────────────────
 
 run:
-	go run ./cmd/server
+	go run $(LDFLAGS) ./cmd/server
 
 build:
-	go build -o bin/billcore ./cmd/server
+	go build $(LDFLAGS) -o bin/billcore ./cmd/server
 
 test:
 	go test ./...
 
-lint:
-	golangci-lint run ./...
-
-# --- Migrations ---
+# ── Migrations ───────────────────────────────────────────────────────────────
 
 migrate-up:
 	$(MIGRATE) -path $(MIGRATE_PATH) -database "$(DB_URL)" up
@@ -39,21 +38,30 @@ migrate-create:
 	@read -p "Migration name: " name; \
 	$(MIGRATE) create -ext sql -dir $(MIGRATE_PATH) -seq $$name
 
-# --- Next.js ---
+# ── Next.js ──────────────────────────────────────────────────────────────────
 
 web-install:
 	cd web && npm install
 
 web-dev:
-	cd web && npm install && npm run dev
+	cd web && npm install && NEXT_PUBLIC_VERSION=$(VERSION) npm run dev
 
 web-build:
-	cd web && npm install && npm run build
+	cd web && npm install && NEXT_PUBLIC_VERSION=$(VERSION) npm run build
+	rm -rf cmd/server/web/out && cp -r web/out cmd/server/web/out
+	@echo "Static files copied to cmd/server/web/out"
 
 web-start:
-	cd web && npm run start
+	cd web && NEXT_PUBLIC_VERSION=$(VERSION) npm run start
 
-# --- Docker ---
+# ── Docker ───────────────────────────────────────────────────────────────────
+
+docker-build:
+	docker build \
+		--build-arg VERSION=$(VERSION) \
+		-t $(IMAGE_NAME):$(VERSION) \
+		-t $(IMAGE_NAME):latest \
+		.
 
 docker-up:
 	docker compose up -d
@@ -61,7 +69,19 @@ docker-up:
 docker-down:
 	docker compose down
 
-# --- Dev: run API + Next.js simultaneously ---
+# ── Dev (API + web simultaneously) ───────────────────────────────────────────
 
 dev:
 	make -j2 run web-dev
+
+# ── Release ──────────────────────────────────────────────────────────────────
+# Usage: make release V=v0.2.0
+
+release:
+	@if [ -z "$(V)" ]; then echo "Usage: make release V=v0.2.0"; exit 1; fi
+	@echo "$(V)" > VERSION
+	@sed -i "s/version: \".*\"/version: \"$(V)\"/" web/package.json
+	git add VERSION web/package.json
+	git commit -m "release: $(V)"
+	git tag $(V)
+	@echo "Released $(V). Run: git push && git push --tags"

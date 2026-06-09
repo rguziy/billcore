@@ -3,8 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { periodsApi, calculationsApi, clientsApi, subscriptionsApi, servicesApi } from "@/lib/api";
-import type { CalculationRow, Period, Client, Location, CalculationStatus } from "@/types";
-import Alert from "@/app/_components/Alert";
+import type { CalculationRow, Period, Client, Location, CalculationStatus } from "@/types";import Alert from "@/app/_components/Alert";
 import Modal from "@/app/_components/Modal";
 
 const statusColor: Record<CalculationStatus, string> = {
@@ -65,7 +64,7 @@ function CalculationsContent() {
         setClients(cp.clients);
         // auto-select open period if no period in URL
         if (!searchParams.get("period_id") && p.length > 0) {
-          const open = p.find((x) => x.status === "open") ?? p[0];
+          const open = p.find((x: Period) => x.status === "open") ?? p[0];
           const params = new URLSearchParams(searchParams.toString());
           params.set("period_id", String(open.id));
           router.replace(`/calculations?${params.toString()}`);

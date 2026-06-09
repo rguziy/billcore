@@ -1,4 +1,4 @@
-const BASE = process.env.API_URL ?? "http://localhost:8080";
+const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080") + "/api";
 
 function authHeaders(): Record<string, string> {
   if (typeof window === "undefined") return {};
@@ -22,7 +22,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 import type {
-  Client, Location, ClientBalance, Calculation, CalculationRow,
+  Client, ClientPage, Location, ClientBalance, Calculation, CalculationRow,
   Service, Tariff, Subscription, Period, OpenPeriodResponse, User,
 } from "@/types";
 

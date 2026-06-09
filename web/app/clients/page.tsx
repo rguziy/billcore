@@ -108,11 +108,10 @@ export default function ClientsPage() {
         <div className="row g-2 align-items-end">
           <div className="col-md-5">
             <label className="form-label">Search by name or account number</label>
-            <input className="form-control" placeholder="e.g. Гузій or BC-12345678"
+            <input className="form-control" placeholder="e.g. Bob or BC-12345678"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={handleKey}
-              placeholder="e.g. Bob or BC-12345678" />
+              onKeyDown={handleKey} />
           </div>
           <div className="col-md-2">
             <label className="form-label">Status</label>
@@ -171,7 +170,7 @@ export default function ClientsPage() {
                   <tr key={c.id}>
                     <td className="ps-3"><code style={{ fontSize: "0.8rem" }}>{c.account_number}</code></td>
                     <td>
-                      <Link href={`/clients/${c.id}`} className="fw-semibold text-decoration-none">
+                      <Link href={`/clients/detail?id=${c.id}`} className="fw-semibold text-decoration-none">
                         {c.full_name}
                       </Link>
                     </td>

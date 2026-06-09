@@ -4,11 +4,15 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 import "./globals.css";
 import Sidebar from "./_components/Sidebar";
 import Header from "./_components/Header";
+import Footer from "./_components/Footer";
 import AuthGuard from "./_components/AuthGuard";
 
 export const metadata: Metadata = {
   title: "BillCore",
   description: "Universal billing system",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -23,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <main className="flex-grow-1">
                 <div className="p-4">{children}</div>
               </main>
+              <Footer />
             </div>
           </div>
         </AuthGuard>

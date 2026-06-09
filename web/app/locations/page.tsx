@@ -118,7 +118,7 @@ function LocationsContent() {
           </div>
           {selectedClient && (
             <div className="col-md-auto d-flex gap-2 pb-1">
-              <Link href={`/clients/${selectedClient.id}`} className="btn btn-sm btn-outline-secondary">
+              <Link href={`/clients/detail?id=${selectedClient.id}`} className="btn btn-sm btn-outline-secondary">
                 <i className="bi bi-person me-1" />Client profile
               </Link>
               <Link href={`/subscriptions?client_id=${selectedClient.id}`} className="btn btn-sm btn-outline-secondary">

@@ -9,9 +9,10 @@ export default function Header() {
   const router   = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [mounted, setMounted] = useState(false);
 
-  // Re-read user on every navigation to catch account switches
   useEffect(() => {
+    setMounted(true);
     setUser(getUser());
   }, [pathname]);
 
@@ -20,7 +21,7 @@ export default function Header() {
     router.push("/login");
   };
 
-  if (!user) return null;
+  if (!mounted || !user || pathname === "/login") return null;
 
   return (
     <div style={{
@@ -37,8 +38,8 @@ export default function Header() {
         <i className="bi bi-person-circle me-1" />
         <strong>{user.username}</strong>
         <span className="ms-2 badge" style={{
-          background: user.role === "admin" ? "#7c3aed22" : "#0891b222",
-          color: user.role === "admin" ? "#7c3aed" : "#0891b2",
+          background: user.role === "admin" ? "#7c3aed22" : user.role === "manager" ? "#0891b222" : "#05966922",
+          color: user.role === "admin" ? "#7c3aed" : user.role === "manager" ? "#0891b2" : "#059669",
           fontSize: "0.7rem",
         }}>
           {user.role}

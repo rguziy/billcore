@@ -2,30 +2,42 @@ services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+    env_file: .env
     environment:
-      POSTGRES_USER: billcore
-      POSTGRES_PASSWORD: secret
-      POSTGRES_DB: billcore
+      POSTGRES_USER: ${DB_USER:-billcore}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+      POSTGRES_DB: ${DB_NAME:-billcore}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-billcore} -d ${DB_NAME:-billcore}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   app:
-    build: .
+    image: billcore:${VERSION:-latest}
+    build:
+      context: .
+      args:
+        VERSION: ${VERSION:-dev}
     restart: unless-stopped
+    env_file: .env
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_USER: billcore
-      DB_PASSWORD: secret
-      DB_NAME: billcore
-      SERVER_PORT: 8080
-      JWT_SECRET: change-me-in-production
+      DB_USER: ${DB_USER:-billcore}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      DB_NAME: ${DB_NAME:-billcore}
+      SERVER_PORT: ${SERVER_PORT:-8080}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
     ports:
-      - "8080:8080"
+      - "${SERVER_PORT:-8080}:8080"
 
 volumes:
   postgres_data:
