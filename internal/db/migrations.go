@@ -10,6 +10,9 @@ import (
 	"github.com/rguziy/billcore/internal/migrations"
 )
 
+// RunMigrations applies all pending migrations.
+// schema_migrations table is stored in public schema (default),
+// matching the behaviour of the golang-migrate CLI.
 func RunMigrations(dsn string) error {
 	src, err := iofs.New(migrations.Files, "sql")
 	if err != nil {

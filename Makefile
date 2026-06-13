@@ -8,7 +8,7 @@ DB_URL     := postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NA
 LDFLAGS    := -ldflags "-X main.Version=$(VERSION)"
 IMAGE_NAME := billcore
 
-.PHONY: run build test migrate-up migrate-down migrate-force migrate-create \
+.PHONY: run build test migrate-up migrate-down migrate-force migrate-create demo-data \
         web-install web-dev web-build web-start \
         docker-build docker-up docker-down dev release
 
@@ -37,6 +37,10 @@ migrate-force:
 migrate-create:
 	@read -p "Migration name: " name; \
 	$(MIGRATE) create -ext sql -dir $(MIGRATE_PATH) -seq $$name
+
+# Load demo data (requires running PostgreSQL)
+demo-data:
+	psql "$(DB_URL)" -f scripts/demo_data.sql
 
 # ── Next.js ──────────────────────────────────────────────────────────────────
 

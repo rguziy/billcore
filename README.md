@@ -119,6 +119,21 @@ Default credentials: `admin / admin`, `manager / manager`
 
 ---
 
+
+## 🎮 Demo data
+
+Want to explore BillCore with realistic data? Load the demo dataset:
+
+```bash
+# Make sure PostgreSQL is running and migrations applied
+make demo-data
+```
+
+This creates **5 clients**, **10 services**, **3 billing periods** (Jan–Mar 2025 with partial payments), locations, subscriptions and calculations — ready to explore.
+
+See the **[User Guide](docs/USER_GUIDE.md)** for a step-by-step walkthrough of all features using the demo data.
+
+---
 ## 🐳 Docker (production)
 
 ### Build image

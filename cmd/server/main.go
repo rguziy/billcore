@@ -31,7 +31,6 @@ var staticFiles embed.FS
 
 func main() {
 	_ = godotenv.Load()
-
 	slog.Info("starting BillCore", "version", Version)
 
 	cfg, err := config.Load()
@@ -141,11 +140,9 @@ func main() {
 
 func spaHandler(fsys fs.FS) http.Handler {
 	fileServer := http.FileServer(http.FS(fsys))
-
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		upath := path.Clean(r.URL.Path)
 		fpath := strings.TrimPrefix(upath, "/")
-
 		if fpath == "" || fpath == "." {
 			fileServer.ServeHTTP(w, r)
 			return
@@ -156,9 +153,7 @@ func spaHandler(fsys fs.FS) http.Handler {
 			if strings.HasPrefix(fpath, "_next") {
 				slog.Warn("static file not found in embed", "path", fpath, "err", err)
 			}
-
 			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
-
 			r.URL.Path = "/"
 			fileServer.ServeHTTP(w, r)
 			return
@@ -167,7 +162,6 @@ func spaHandler(fsys fs.FS) http.Handler {
 		if strings.HasPrefix(fpath, "_next/static/") {
 			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 		}
-
 		fileServer.ServeHTTP(w, r)
 	})
 }
