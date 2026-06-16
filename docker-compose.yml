@@ -2,7 +2,6 @@ services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
-    env_file: .env
     environment:
       POSTGRES_USER: ${DB_USER:-billcore}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
@@ -24,13 +23,12 @@ services:
       args:
         VERSION: ${VERSION:-dev}
     restart: unless-stopped
-    env_file: .env
     depends_on:
       postgres:
         condition: service_healthy
     environment:
       DB_HOST: postgres
-      DB_PORT: 5432
+      DB_PORT: "5432"
       DB_USER: ${DB_USER:-billcore}
       DB_PASSWORD: ${DB_PASSWORD:-secret}
       DB_NAME: ${DB_NAME:-billcore}
@@ -41,3 +39,4 @@ services:
 
 volumes:
   postgres_data:
+    name: billcore_postgres_data
