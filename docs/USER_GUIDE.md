@@ -35,7 +35,7 @@ This creates:
 
 Open [http://localhost:8080](http://localhost:8080) (or [http://localhost:3000](http://localhost:3000) in dev mode).
 
-<!-- SCREENSHOT: Login page -->
+![Login page](login.png)
 
 Default accounts:
 
@@ -58,7 +58,7 @@ Services define what you bill for. Each service has a unit of measurement and a 
 
 After loading demo data you will see 10 services. The **Current tariff** column shows the active price per unit at a glance — no need to expand rows.
 
-<!-- SCREENSHOT: Services list with Current tariff column visible -->
+![Services list](services.png)
 
 A red warning ⚠ **No active tariff** means calculations cannot be generated for that service until a tariff is added.
 
@@ -70,7 +70,7 @@ A red warning ⚠ **No active tariff** means calculations cannot be generated fo
 4. Check **Set initial tariff now** and enter the price
 5. Click **Save**
 
-<!-- SCREENSHOT: New Service modal with initial tariff section -->
+![New Service](service.png)
 
 ### Change a tariff
 
@@ -93,7 +93,7 @@ The old tariff remains in history for audit purposes.
 
 Use the search box to find by name or account number. Partial matches work — type `ali` to find Alice Johnson.
 
-<!-- SCREENSHOT: Clients list with search results for "ali" -->
+![Clients list](clients.png)
 
 The list shows up to 20 clients by default. The counter shows `Showing 1–5 of 5 clients`.
 
@@ -114,7 +114,7 @@ Each row has three shortcut buttons:
 3. Account number is auto-generated (`BC-XXXXXXXX`) — regenerate with ↻ or type your own
 4. Add phone and email (optional)
 
-<!-- SCREENSHOT: New Client modal with auto-generated account number -->
+![New Client](client.png)
 
 ### Client detail page
 
@@ -127,8 +127,7 @@ Click a client's name to open their detail page. It shows:
 - **Pending calculations** — what is owed this period
 - **Payment history** — all paid calculations
 
-<!-- SCREENSHOT: Alice Johnson detail page showing balance and pending calculations -->
-
+![Detail](detail.png)
 ---
 
 ## 4. Locations
@@ -141,7 +140,7 @@ A location is a physical address belonging to a client. Alice Johnson has two: h
 
 Select a client in the filter dropdown. Her locations appear in the table.
 
-<!-- SCREENSHOT: Locations page filtered for Alice Johnson, showing Apartment and Cottage -->
+![Locations](locations.png)
 
 ### Add a location
 
@@ -164,7 +163,7 @@ A subscription connects a service to a client's location. Alice's Apartment is s
 
 Filter by client, then optionally by location.
 
-<!-- SCREENSHOT: Subscriptions page filtered for Alice Johnson, showing all 10 services -->
+![Subscriptions](subscriptions.png)
 
 The **Status** column shows **Active** (green) or **Disconnected** (red with date).
 
@@ -194,7 +193,7 @@ Periods represent billing months. The demo data has three:
 | Feb 2025   | 🔒 Closed | Partial payments               |
 | Mar 2025   | 🔓 Open   | Awaiting meter readings        |
 
-<!-- SCREENSHOT: Periods list showing three periods with status badges -->
+![Periods list](periods.png)
 
 ### Open a new period
 
@@ -206,7 +205,7 @@ BillCore automatically creates calculations for all active subscriptions:
 - **Flat-rate services** (Internet, Maintenance): amount is calculated immediately
 - **Metered services** (Water, Electricity): previous reading is filled from the last period, current reading is left blank
 
-<!-- SCREENSHOT: Open Period modal -->
+![Open Period](period.png)
 
 ### Close a period
 
@@ -226,11 +225,11 @@ This is where operators work daily — entering meter readings and marking payme
 
 The current open period is selected automatically. Filter by client and optionally by location.
 
-<!-- SCREENSHOT: Calculations page for March 2025 filtered for Alice Johnson -->
+![Calculations](calculations.png)
 
 The summary row shows:
 ```
-Total accrued: 2,845.60   Paid: 0.00   Pending: 2,845.60
+Total accrued: 357.28   Paid: 0.00   Pending: 357.28
 ```
 
 An orange badge **⚠ 5 need reading** indicates how many metered services still need current readings.
@@ -240,10 +239,10 @@ An orange badge **⚠ 5 need reading** indicates how many metered services still
 1. Click ✏️ on a row with `enter ↓` in the **Curr** column
 2. The modal shows the **Previous reading** (auto-filled)
 3. Enter the **Current reading**
-4. The **Quantity** is calculated live: `608 - 600 = 8 m³`
+4. The **Quantity** is calculated live: `668 - 655 = 13 m³`
 5. Click **Save** — amount is recalculated automatically
 
-<!-- SCREENSHOT: Edit calculation modal for Cold Water showing prev=600, curr=608, quantity=8 -->
+![Calculation](calculation.png)
 
 ### Mark a calculation as paid
 
@@ -271,7 +270,7 @@ If a subscription was added mid-period, click **Add Calculation**:
 
 The statistics page gives a real-time overview of the system.
 
-<!-- SCREENSHOT: Statistics page showing client, user, and service cards plus current period summary -->
+![Statistics](statistics.png)
 
 ### Client card
 - **Total** — all registered clients
@@ -299,7 +298,7 @@ Click **View calculations** to jump directly to that period.
 **Navigation:** Administration → Users  
 *(Admin only)*
 
-<!-- SCREENSHOT: Users list showing admin, manager, and an operator -->
+![Users list](users.png)
 
 ### Add a user
 

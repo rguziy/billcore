@@ -25,45 +25,45 @@ INSERT INTO billcore.services (name, unit, has_meter) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- Tariffs for metered services
-INSERT INTO billcore.tariffs (service_id, price_per_unit, valid_from)
-SELECT id, 28.50,  '2024-01-01' FROM billcore.services WHERE name = 'Cold Water'
+INSERT INTO billcore.tariffs (service_id, price_per_unit, valid_from, note)
+SELECT id, 28.50,  '2024-01-01', '' FROM billcore.services WHERE name = 'Cold Water'
 ON CONFLICT DO NOTHING;
 
-INSERT INTO billcore.tariffs (service_id, price_per_unit, valid_from)
-SELECT id, 89.20,  '2024-01-01' FROM billcore.services WHERE name = 'Hot Water'
+INSERT INTO billcore.tariffs (service_id, price_per_unit, valid_from, note)
+SELECT id, 89.20,  '2024-01-01', '' FROM billcore.services WHERE name = 'Hot Water'
 ON CONFLICT DO NOTHING;
 
-INSERT INTO billcore.tariffs (service_id, price_per_unit, valid_from)
-SELECT id, 4.32,   '2024-01-01' FROM billcore.services WHERE name = 'Electricity'
+INSERT INTO billcore.tariffs (service_id, price_per_unit, valid_from, note)
+SELECT id, 4.32,   '2024-01-01', '' FROM billcore.services WHERE name = 'Electricity'
 ON CONFLICT DO NOTHING;
 
-INSERT INTO billcore.tariffs (service_id, price_per_unit, valid_from)
-SELECT id, 7.99,   '2024-01-01' FROM billcore.services WHERE name = 'Natural Gas'
+INSERT INTO billcore.tariffs (service_id, price_per_unit, valid_from, note)
+SELECT id, 7.99,   '2024-01-01', '' FROM billcore.services WHERE name = 'Natural Gas'
 ON CONFLICT DO NOTHING;
 
-INSERT INTO billcore.tariffs (service_id, price_per_unit, valid_from)
-SELECT id, 1654.41,'2024-01-01' FROM billcore.services WHERE name = 'Heating'
+INSERT INTO billcore.tariffs (service_id, price_per_unit, valid_from, note)
+SELECT id, 1654.41, '2024-01-01', '' FROM billcore.services WHERE name = 'Heating'
 ON CONFLICT DO NOTHING;
 
 -- Tariffs for flat-rate services
-INSERT INTO billcore.tariffs (service_id, price_per_unit, valid_from)
-SELECT id, 6.93,   '2024-01-01' FROM billcore.services WHERE name = 'Hot Water Drainage'
+INSERT INTO billcore.tariffs (service_id, price_per_unit, valid_from, note)
+SELECT id, 6.93,   '2024-01-01', '' FROM billcore.services WHERE name = 'Hot Water Drainage'
 ON CONFLICT DO NOTHING;
 
-INSERT INTO billcore.tariffs (service_id, price_per_unit, valid_from)
-SELECT id, 12.35,  '2024-01-01' FROM billcore.services WHERE name = 'Building Maintenance'
+INSERT INTO billcore.tariffs (service_id, price_per_unit, valid_from, note)
+SELECT id, 12.35,  '2024-01-01', '' FROM billcore.services WHERE name = 'Building Maintenance'
 ON CONFLICT DO NOTHING;
 
-INSERT INTO billcore.tariffs (service_id, price_per_unit, valid_from)
-SELECT id, 245.00, '2024-01-01' FROM billcore.services WHERE name = 'Internet'
+INSERT INTO billcore.tariffs (service_id, price_per_unit, valid_from, note)
+SELECT id, 245.00, '2024-01-01', '' FROM billcore.services WHERE name = 'Internet'
 ON CONFLICT DO NOTHING;
 
-INSERT INTO billcore.tariffs (service_id, price_per_unit, valid_from)
-SELECT id, 55.00,  '2024-01-01' FROM billcore.services WHERE name = 'Intercom'
+INSERT INTO billcore.tariffs (service_id, price_per_unit, valid_from, note)
+SELECT id, 55.00,  '2024-01-01', '' FROM billcore.services WHERE name = 'Intercom'
 ON CONFLICT DO NOTHING;
 
-INSERT INTO billcore.tariffs (service_id, price_per_unit, valid_from)
-SELECT id, 38.00,  '2024-01-01' FROM billcore.services WHERE name = 'Garbage Collection'
+INSERT INTO billcore.tariffs (service_id, price_per_unit, valid_from, note)
+SELECT id, 38.00,  '2024-01-01', '' FROM billcore.services WHERE name = 'Garbage Collection'
 ON CONFLICT DO NOTHING;
 
 -- -----------------------------------------------------------

@@ -1,5 +1,7 @@
-include .env
+-include .env
 export
+
+.DEFAULT_GOAL := help
 
 VERSION    := $(shell cat VERSION)
 MIGRATE    := $(HOME)/go/bin/migrate
@@ -8,9 +10,30 @@ DB_URL     := postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NA
 LDFLAGS    := -ldflags "-X main.Version=$(VERSION)"
 IMAGE_NAME := billcore
 
-.PHONY: run build test migrate-up migrate-down migrate-force migrate-create demo-data \
+.PHONY: help run build test migrate-up migrate-down migrate-force migrate-create demo-data \
         web-install web-dev web-build web-start \
         docker-build docker-up docker-down dev release
+
+help:
+	@echo "Available commands:"
+	@echo "  make help             Show this help"
+	@echo "  make run              Start Go API server (dev)"
+	@echo "  make build            Build Go binary to bin/billcore"
+	@echo "  make test             Run Go tests"
+	@echo "  make migrate-up       Apply all pending migrations"
+	@echo "  make migrate-down     Rollback last migration"
+	@echo "  make migrate-force    Force migration version (V=n)"
+	@echo "  make migrate-create   Create a new migration file"
+	@echo "  make demo-data        Load demo data from scripts/demo_data.sql"
+	@echo "  make web-install      Install frontend dependencies"
+	@echo "  make web-dev          Start Next.js dev server on :3000"
+	@echo "  make web-build        Build Next.js static export"
+	@echo "  make web-start        Start Next.js production server"
+	@echo "  make docker-build     Build production Docker image"
+	@echo "  make docker-up        Start services via Docker Compose"
+	@echo "  make docker-down      Stop Docker Compose services"
+	@echo "  make dev              Run API + Next.js simultaneously"
+	@echo "  make release          Tag new release (V=v0.x.0)"
 
 # ── Go ──────────────────────────────────────────────────────────────────────
 
