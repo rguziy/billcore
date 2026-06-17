@@ -17,8 +17,8 @@ billcore/
 │   └── web/out/             # Placeholder (replaced by make web-build or Docker)
 ├── internal/
 │   ├── config/              # Env config
-│   ├── db/                  # pgx pool, migration runner
-│   ├── domain/              # Domain structs (no dependencies)
+│   ├── db/                  # pgx pool, migration runner (auto-creates billcore schema)
+│   ├── domain/              # Domain structs
 │   ├── migrations/
 │   │   ├── embed.go         # Embeds SQL files into binary
 │   │   └── sql/             # Migration files (000001…)
@@ -26,11 +26,12 @@ billcore/
 │   ├── service/             # Business logic
 │   └── api/                 # HTTP router, middleware, handlers
 ├── web/                     # Next.js 15 frontend (static export)
-│   ├── app/                 # App router pages
-│   ├── lib/                 # API client, auth helpers
-│   └── types/               # Domain TypeScript types
+├── scripts/
+│   └── demo_data.sql        # Demo data for exploration
+├── docs/
+│   └── USER_GUIDE.md        # Step-by-step user guide with demo data
 ├── VERSION                  # Single source of version (e.g. v0.1.0)
-├── Dockerfile               # Multi-stage: Node → Go → Alpine
+├── Dockerfile               # Multi-stage: Node → Go → Alpine (single image)
 ├── docker-compose.yml
 ├── Makefile
 └── README.md
@@ -44,7 +45,7 @@ billcore/
 |------------|-------------------------------------------|
 | Database   | PostgreSQL 16                             |
 | Backend    | Go 1.22, Chi router, pgx/v5, bcrypt       |
-| Migrations | golang-migrate (embedded in binary)       |
+| Migrations | golang-migrate (embedded in binary, auto-run on start) |
 | Frontend   | Next.js 15 (static export), Bootstrap 5  |
 | Auth       | JWT (HS256), role-based (admin/manager/operator) |
 
@@ -52,13 +53,13 @@ billcore/
 
 ## 👥 Roles
 
-| Feature                        | Operator | Manager | Admin |
-|-------------------------------|----------|---------|-------|
-| Clients, Locations, Subscriptions, Calculations | ✅ | ✅ | ✅ |
-| Statistics                    | ❌       | ✅      | ✅    |
-| Services, Tariffs (CRUD)      | 👁 read  | ✅      | ✅    |
-| Periods (open/close)          | 👁 read  | ✅      | ✅    |
-| Users (CRUD)                  | ❌       | ❌      | ✅    |
+| Feature                                        | Operator | Manager | Admin |
+|------------------------------------------------|----------|---------|-------|
+| Clients, Locations, Subscriptions, Calculations | ✅      | ✅      | ✅    |
+| Statistics                                     | ❌       | ✅      | ✅    |
+| Services, Tariffs (CRUD)                       | 👁 read  | ✅      | ✅    |
+| Periods (open/close)                           | 👁 read  | ✅      | ✅    |
+| Users (CRUD)                                   | ❌       | ❌      | ✅    |
 
 Default pages after login: **Operator** → `/clients`, **Manager** → `/statistics`, **Admin** → `/users`
 
@@ -77,10 +78,8 @@ cd billcore
 
 ```bash
 cp .env.example .env
-# Edit DB credentials and JWT_SECRET (use: openssl rand -hex 32)
-
-cp web/.env.local.example web/.env.local
-# NEXT_PUBLIC_API_URL=http://localhost:8080
+# Edit .env — set DB credentials and JWT_SECRET:
+# openssl rand -hex 32
 ```
 
 ### 3. Install golang-migrate
@@ -88,52 +87,59 @@ cp web/.env.local.example web/.env.local
 ```bash
 go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 export PATH=$PATH:~/go/bin
+migrate -version
 ```
 
-### 4. Start PostgreSQL
+### 4. Create PostgreSQL database
 
-```bash
-make docker-up
+Connect to PostgreSQL as a superuser and run:
+
+```sql
+CREATE USER billcore WITH PASSWORD 'secret';
+CREATE DATABASE billcore OWNER billcore ENCODING 'UTF8';
 ```
 
-### 5. Run migrations
+> **Docker alternative:** skip this step and use `make docker-up` instead (see [Docker section](#-docker-production)).
+
+> **Install psql client (if needed):**
+> ```bash
+> sudo apt update && sudo apt install -y postgresql-client
+> ```
+
+### 5. Start the API server
 
 ```bash
-make migrate-up
+make run
 ```
 
-### 6. Start API + frontend (two terminals or simultaneously)
+The server automatically:
+1. Creates the `billcore` schema if it doesn't exist
+2. Runs all pending migrations
+3. Starts serving on `:8080`
+
+> **Note:** `make migrate-up` can still be used to run migrations manually, but running `make run` is sufficient — migrations are embedded in the binary and run automatically on every start.
+
+### 6. Start the frontend (separate terminal)
 
 ```bash
-# Option A: simultaneously
-make dev
-
-# Option B: separately
-make run          # Go API on :8080
-make web-dev      # Next.js on :3000
+cd web
+cp .env.local.example .env.local   # set NEXT_PUBLIC_API_URL=http://localhost:8080
+npm install
+npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000)
+
+Or run both simultaneously:
+
+```bash
+make dev
+```
 
 Default credentials: `admin / admin`, `manager / manager`
 
 ---
 
-
-## 🎮 Demo data
-
-Want to explore BillCore with realistic data? Load the demo dataset:
-
-```bash
-# Make sure PostgreSQL is running and migrations applied
-make demo-data
-```
-
-This creates **5 clients**, **10 services**, **3 billing periods** (Jan–Mar 2025 with partial payments), locations, subscriptions and calculations — ready to explore.
-
-See the **[User Guide](docs/USER_GUIDE.md)** for a step-by-step walkthrough of all features using the demo data.
-
----
 ## 🐳 Docker (production)
 
 ### Build image
@@ -143,61 +149,76 @@ make docker-build
 # builds billcore:v0.1.0 and billcore:latest
 ```
 
-This creates a **single image** containing:
-- Go binary (API + migrations)
-- Next.js static files (embedded via `go:embed`)
-
-Everything runs on **one port (:8080)**.
+Single image containing Go binary + embedded Next.js static files. One port (`:8080`).
 
 ### Run with Docker Compose
 
 ```bash
-# Copy and edit .env
 cp .env.example .env
+# Edit JWT_SECRET — required!
 
 make docker-up
 ```
 
 Open [http://localhost:8080](http://localhost:8080)
 
+```bash
+make docker-down        # stop (data preserved)
+make docker-down && docker volume rm billcore_postgres_data  # stop + wipe data
+```
+
 ---
 
 ## 📦 Versioning & release
 
-Version is stored in `VERSION` file and propagated to:
-- Go binary (`-ldflags "-X main.Version=..."`)
-- Next.js build (`NEXT_PUBLIC_VERSION`)
-- Docker image tag
-
-### Create a release
+Version is stored in `VERSION` file and propagated to Go binary, Next.js build, and Docker image tag.
 
 ```bash
 make release V=v0.2.0
-# Updates VERSION, package.json, commits, tags
+# Updates VERSION, package.json, commits, creates git tag
 
 git push && git push --tags
 ```
 
 ---
 
-## 🗃️ Migrations
+## 🎮 Demo data
+
+Load realistic demo data to explore the system:
 
 ```bash
-make migrate-up           # Apply all pending migrations
+# Requires psql client: sudo apt install -y postgresql-client
+make demo-data
+```
+
+Creates: **5 clients**, **10 services with tariffs**, **3 billing periods** (Jan 2025 paid, Feb 2025 partial, Mar 2025 open with pending meter readings), locations, subscriptions and calculations.
+
+---
+
+## 📖 User Guide
+
+See **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)** for a step-by-step walkthrough of all features using the demo data, including screenshots placeholders for each section.
+
+---
+
+## 🗃️ Migrations
+
+Migrations run **automatically on server start** via the embedded `golang-migrate`. Manual CLI commands are available for development:
+
+```bash
+make migrate-up           # Apply all pending migrations manually
 make migrate-down         # Rollback last migration
-make migrate-create       # Create new migration (prompts for name)
+make migrate-force V=n    # Force migration to version n (fix dirty state)
+make migrate-create       # Create new migration file (prompts for name)
 ```
 
 ### Dirty database state
 
-If a migration fails midway:
+If a migration fails midway, the server auto-recovers by forcing the version back and retrying. If you need to fix manually:
 
 ```bash
-# Force version to last known good state
-make migrate-force V=1
-
-# Then re-apply
-make migrate-up
+make migrate-force V=1    # force to version before the failure
+make migrate-up           # retry
 ```
 
 To wipe and start fresh:
@@ -205,7 +226,6 @@ To wipe and start fresh:
 ```bash
 psql "postgres://billcore:secret@localhost:5432/billcore" \
   -c "DROP SCHEMA IF EXISTS billcore CASCADE;"
-
 make migrate-force V=0
 make migrate-up
 ```
@@ -216,15 +236,19 @@ make migrate-up
 
 | Command               | Description                                        |
 |-----------------------|----------------------------------------------------|
-| `make run`            | Start Go API server (dev)                          |
+| `make run`            | Start Go API server (runs migrations automatically)|
 | `make build`          | Build Go binary to `bin/billcore`                  |
-| `make web-dev`        | Start Next.js dev server on :3000                  |
-| `make web-build`      | Build Next.js static export → `cmd/server/web/out` |
-| `make dev`            | Run API + Next.js simultaneously                   |
-| `make migrate-up`     | Apply all pending migrations                       |
+| `make test`           | Run all tests                                      |
+| `make migrate-up`     | Apply pending migrations manually via CLI          |
 | `make migrate-down`   | Rollback last migration                            |
 | `make migrate-force`  | Force migration version (`V=n`)                    |
 | `make migrate-create` | Create new migration file                          |
+| `make demo-data`      | Load demo data from `scripts/demo_data.sql`        |
+| `make web-install`    | Install frontend dependencies                      |
+| `make web-dev`        | Start Next.js dev server on :3000                  |
+| `make web-build`      | Build Next.js static export → `cmd/server/web/out` |
+| `make web-start`      | Start Next.js production server                    |
+| `make dev`            | Run API + Next.js simultaneously                   |
 | `make docker-build`   | Build production Docker image                      |
 | `make docker-up`      | Start services via Docker Compose                  |
 | `make docker-down`    | Stop Docker Compose services                       |
