@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { statisticsApi, periodsApi } from "@/lib/api";
+import { useLang } from "@/app/_components/LangProvider";
+import { t } from "@/lib/i18n";
 import Alert from "@/app/_components/Alert";
 import Link from "next/link";
 
@@ -38,6 +40,7 @@ function Metric({ label, value, color = "#0f172a", sub }: {
 }
 
 export default function StatisticsPage() {
+  const { lang } = useLang();
   const [stats, setStats] = useState<Stats | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);

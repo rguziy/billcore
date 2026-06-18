@@ -29,10 +29,12 @@ import type {
 // --- Auth ---
 export const authApi = {
   login: (username: string, password: string) =>
-    request<{ token: string; user: { id: number; username: string; email: string; role: "admin" | "operator" } }>(
+    request<{ token: string; user: { id: number; username: string; email: string; role: "admin" | "operator"; preferred_language?: string } }>(
       "/auth/login", { method: "POST", body: JSON.stringify({ username, password }) }
     ),
   me: () => request<{ user_id: number; username: string; role: string }>("/auth/me"),
+  setLanguage: (language: string) =>
+    request<{ preferred_language: string }>("/auth/language", { method: "PATCH", body: JSON.stringify({ language }) }),
 };
 
 // --- Users ---

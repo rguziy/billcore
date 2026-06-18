@@ -18,7 +18,7 @@ func NewUserRepo(db *pgxpool.Pool) *UserRepo {
 
 func (r *UserRepo) GetAll(ctx context.Context) ([]domain.User, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT id, username, email, role, is_active, created_at, updated_at
+		SELECT id, username, email, role, preferred_language, is_active, created_at, updated_at
 		FROM billcore.users
 		ORDER BY username
 	`)
@@ -31,11 +31,15 @@ func (r *UserRepo) GetAll(ctx context.Context) ([]domain.User, error) {
 	for rows.Next() {
 		var u domain.User
 		var email *string
-		if err := rows.Scan(&u.ID, &u.Username, &email, &u.Role, &u.IsActive, &u.CreatedAt, &u.UpdatedAt); err != nil {
+		var lang *string
+		if err := rows.Scan(&u.ID, &u.Username, &email, &u.Role, &lang, &u.IsActive, &u.CreatedAt, &u.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("users scan: %w", err)
 		}
 		if email != nil {
 			u.Email = *email
+		}
+		if lang != nil {
+			u.PreferredLanguage = domain.Language(*lang)
 		}
 		users = append(users, u)
 	}
@@ -45,15 +49,19 @@ func (r *UserRepo) GetAll(ctx context.Context) ([]domain.User, error) {
 func (r *UserRepo) GetByID(ctx context.Context, id int) (*domain.User, error) {
 	var u domain.User
 	var email *string
+	var lang *string
 	err := r.db.QueryRow(ctx, `
-		SELECT id, username, email, role, is_active, created_at, updated_at
+		SELECT id, username, email, role, preferred_language, is_active, created_at, updated_at
 		FROM billcore.users WHERE id = $1
-	`, id).Scan(&u.ID, &u.Username, &email, &u.Role, &u.IsActive, &u.CreatedAt, &u.UpdatedAt)
+	`, id).Scan(&u.ID, &u.Username, &email, &u.Role, &lang, &u.IsActive, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("user get by id: %w", err)
 	}
 	if email != nil {
 		u.Email = *email
+	}
+	if lang != nil {
+		u.PreferredLanguage = domain.Language(*lang)
 	}
 	return &u, nil
 }
@@ -61,15 +69,19 @@ func (r *UserRepo) GetByID(ctx context.Context, id int) (*domain.User, error) {
 func (r *UserRepo) GetByUsername(ctx context.Context, username string) (*domain.User, error) {
 	var u domain.User
 	var email *string
+	var lang *string
 	err := r.db.QueryRow(ctx, `
-		SELECT id, username, email, password_hash, role, is_active, created_at, updated_at
+		SELECT id, username, email, password_hash, role, preferred_language, is_active, created_at, updated_at
 		FROM billcore.users WHERE username = $1
-	`, username).Scan(&u.ID, &u.Username, &email, &u.PasswordHash, &u.Role, &u.IsActive, &u.CreatedAt, &u.UpdatedAt)
+	`, username).Scan(&u.ID, &u.Username, &email, &u.PasswordHash, &u.Role, &lang, &u.IsActive, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
 	if email != nil {
 		u.Email = *email
+	}
+	if lang != nil {
+		u.PreferredLanguage = domain.Language(*lang)
 	}
 	return &u, nil
 }
@@ -79,11 +91,15 @@ func (r *UserRepo) Create(ctx context.Context, u *domain.User) error {
 	if u.Email != "" {
 		email = &u.Email
 	}
+	lang := domain.DefaultLanguage()
+	if u.PreferredLanguage != "" {
+		lang = u.PreferredLanguage
+	}
 	return r.db.QueryRow(ctx, `
-		INSERT INTO billcore.users (username, email, password_hash, role)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO billcore.users (username, email, password_hash, role, preferred_language)
+		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id, created_at, updated_at
-	`, u.Username, email, u.PasswordHash, u.Role,
+	`, u.Username, email, u.PasswordHash, u.Role, lang,
 	).Scan(&u.ID, &u.CreatedAt, &u.UpdatedAt)
 }
 
@@ -92,9 +108,21 @@ func (r *UserRepo) Update(ctx context.Context, u *domain.User) error {
 	if u.Email != "" {
 		email = &u.Email
 	}
+	lang := domain.DefaultLanguage()
+	if u.PreferredLanguage != "" {
+		lang = u.PreferredLanguage
+	}
 	_, err := r.db.Exec(ctx, `
-		UPDATE billcore.users SET username = $1, email = $2, role = $3 WHERE id = $4
-	`, u.Username, email, u.Role, u.ID)
+		UPDATE billcore.users SET username = $1, email = $2, role = $3, preferred_language = $4 WHERE id = $5
+	`, u.Username, email, u.Role, lang, u.ID)
+	return err
+}
+
+func (r *UserRepo) SetPreferredLanguage(ctx context.Context, id int, language domain.Language) error {
+	if !domain.IsSupportedLanguage(string(language)) {
+		return fmt.Errorf("unsupported language: %s", language)
+	}
+	_, err := r.db.Exec(ctx, `UPDATE billcore.users SET preferred_language = $1 WHERE id = $2`, language, id)
 	return err
 }
 

@@ -6,6 +6,7 @@ import Sidebar from "./_components/Sidebar";
 import Header from "./_components/Header";
 import Footer from "./_components/Footer";
 import AuthGuard from "./_components/AuthGuard";
+import { LangProvider } from "./_components/LangProvider";
 
 export const metadata: Metadata = {
   title: "BillCore",
@@ -19,18 +20,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <AuthGuard>
-          <div className="d-flex" style={{ minHeight: "100vh" }}>
-            <Sidebar />
-            <div className="flex-grow-1 d-flex flex-column bg-light">
-              <Header />
-              <main className="flex-grow-1">
-                <div className="p-4">{children}</div>
-              </main>
-              <Footer />
+        <LangProvider>
+          <AuthGuard>
+            <div className="d-flex" style={{ minHeight: "100vh" }}>
+              <Sidebar />
+              <div className="flex-grow-1 d-flex flex-column bg-light">
+                <Header />
+                <main className="flex-grow-1">
+                  <div className="p-4">{children}</div>
+                </main>
+                <Footer />
+              </div>
             </div>
-          </div>
-        </AuthGuard>
+          </AuthGuard>
+        </LangProvider>
       </body>
     </html>
   );

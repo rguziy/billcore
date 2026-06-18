@@ -3,11 +3,14 @@
 import { useEffect, useState } from "react";
 import { usersApi } from "@/lib/api";
 import { getUser } from "@/lib/auth";
+import { useLang } from "@/app/_components/LangProvider";
+import { t } from "@/lib/i18n";
 import type { User } from "@/types";
 import Modal from "@/app/_components/Modal";
 import Alert from "@/app/_components/Alert";
 
 export default function UsersPage() {
+  const { lang } = useLang();
   const [users, setUsers]   = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]   = useState<string | null>(null);
@@ -89,9 +92,9 @@ export default function UsersPage() {
   return (
     <>
       <div className="bc-page-header">
-        <h1>Users</h1>
+        <h1>{t("users.title", lang)}</h1>
         <button className="btn btn-primary btn-sm" onClick={() => setShowCreate(true)}>
-          <i className="bi bi-plus-lg me-1" /> New User
+          <i className="bi bi-plus-lg me-1" /> {t("users.new", lang)}
         </button>
       </div>
 
@@ -99,16 +102,16 @@ export default function UsersPage() {
 
       <div className="bc-card p-0">
         {loading ? (
-          <div className="p-4 text-center text-muted">Loading...</div>
+          <div className="p-4 text-center text-muted">{t("common.loading", lang)}</div>
         ) : (
           <table className="table bc-table mb-0">
             <thead>
               <tr>
-                <th className="ps-3">Username</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Created</th>
+                <th className="ps-3">{t("users.username", lang)}</th>
+                <th>{t("users.email", lang)}</th>
+                <th>{t("users.role", lang)}</th>
+                <th>{t("common.status", lang)}</th>
+                <th>{t("common.created", lang)}</th>
                 <th></th>
               </tr>
             </thead>
@@ -129,7 +132,7 @@ export default function UsersPage() {
                   </td>
                   <td>
                     {u.is_active
-                      ? <span className="badge badge-paid">Active</span>
+                      ? <span className="badge badge-paid">{t("common.active", lang)}</span>
                       : <span className="badge badge-cancelled">Blocked</span>}
                   </td>
                   <td style={{ fontSize: "0.85rem" }}>{new Date(u.created_at).toLocaleDateString()}</td>
@@ -163,24 +166,24 @@ export default function UsersPage() {
       </div>
 
       {/* Create modal */}
-      <Modal title="New User" show={showCreate} onClose={() => setShowCreate(false)} onConfirm={create}>
+      <Modal title={t("users.new", lang)} show={showCreate} onClose={() => setShowCreate(false)} onConfirm={create}>
         <div className="mb-3">
-          <label className="form-label">Username *</label>
+          <label className="form-label">{t("users.username", lang)} *</label>
           <input className="form-control" value={createForm.username}
             onChange={(e) => setCreateForm({ ...createForm, username: e.target.value })} />
         </div>
         <div className="mb-3">
-          <label className="form-label">Email</label>
+          <label className="form-label">{t("users.email", lang)}</label>
           <input className="form-control" type="email" value={createForm.email}
             onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} />
         </div>
         <div className="mb-3">
-          <label className="form-label">Password *</label>
+          <label className="form-label">{t("users.password", lang)} *</label>
           <input className="form-control" type="password" value={createForm.password}
             onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })} />
         </div>
         <div className="mb-3">
-          <label className="form-label">Role</label>
+          <label className="form-label">{t("users.role", lang)}</label>
           <select className="form-select" value={createForm.role}
             onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}>
             <option value="operator">Operator</option>
@@ -191,19 +194,19 @@ export default function UsersPage() {
       </Modal>
 
       {/* Edit modal */}
-      <Modal title="Edit User" show={editUser !== null} onClose={() => setEditUser(null)} onConfirm={update}>
+      <Modal title={t("users.edit", lang)} show={editUser !== null} onClose={() => setEditUser(null)} onConfirm={update}>
         <div className="mb-3">
-          <label className="form-label">Username *</label>
+          <label className="form-label">{t("users.username", lang)} *</label>
           <input className="form-control" value={editForm.username}
             onChange={(e) => setEditForm({ ...editForm, username: e.target.value })} />
         </div>
         <div className="mb-3">
-          <label className="form-label">Email</label>
+          <label className="form-label">{t("users.email", lang)}</label>
           <input className="form-control" type="email" value={editForm.email}
             onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
         </div>
         <div className="mb-3">
-          <label className="form-label">Role</label>
+          <label className="form-label">{t("users.role", lang)}</label>
           <select className="form-select" value={editForm.role}
             onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}>
             <option value="operator">Operator</option>
@@ -214,17 +217,17 @@ export default function UsersPage() {
       </Modal>
 
       {/* Password modal */}
-      <Modal title="Change Password" show={pwdId !== null} onClose={() => setPwdId(null)} onConfirm={changePassword} confirmLabel="Change">
+      <Modal title={t("users.change_password", lang)} show={pwdId !== null} onClose={() => setPwdId(null)} onConfirm={changePassword} confirmLabel={t("common.save", lang)}>
         <div className="mb-3">
-          <label className="form-label">New password *</label>
+          <label className="form-label">{t("users.new_password", lang)} *</label>
           <input className="form-control" type="password" value={pwdVal}
             onChange={(e) => setPwdVal(e.target.value)} autoFocus />
         </div>
       </Modal>
 
       {/* Delete confirm */}
-      <Modal title="Delete User" show={deleteId !== null} onClose={() => setDeleteId(null)}
-        onConfirm={confirmDelete} confirmLabel="Delete" confirmVariant="danger">
+      <Modal title={t("users.delete_confirm", lang)} show={deleteId !== null} onClose={() => setDeleteId(null)}
+        onConfirm={confirmDelete} confirmLabel={t("common.delete", lang)} confirmVariant="danger">
         <p>Delete this user?</p>
         <p className="text-muted mb-0" style={{ fontSize: "0.875rem" }}>
           Only possible if the user has no action history in the system.

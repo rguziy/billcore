@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { periodsApi } from "@/lib/api";
+import { useLang } from "@/app/_components/LangProvider";
+import { t } from "@/lib/i18n";
 import type { Period, OpenPeriodResponse } from "@/types";
 import Alert from "@/app/_components/Alert";
 import Modal from "@/app/_components/Modal";
@@ -13,6 +15,7 @@ function firstOfCurrentMonth(): string {
 }
 
 export default function PeriodsPage() {
+  const { lang } = useLang();
   const [periods, setPeriods]   = useState<Period[]>([]);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState<string | null>(null);
@@ -72,9 +75,9 @@ export default function PeriodsPage() {
   return (
     <>
       <div className="bc-page-header">
-        <h1>Billing Periods</h1>
+        <h1>{t("periods.title", lang)}</h1>
         <button className="btn btn-primary btn-sm" onClick={() => setShowOpen(true)}>
-          <i className="bi bi-calendar-plus me-1" /> Open Period
+          <i className="bi bi-plus-lg me-1" /> {t("periods.new", lang)}
         </button>
       </div>
 

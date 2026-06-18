@@ -46,6 +46,11 @@ Default accounts:
 
 > Operators are created by admins — see [User Management](#9-user-management).
 
+### Language selection
+
+You can choose the UI language on the login page before signing in.
+The selected language is stored as your preferred language and applied automatically the next time you log in.
+
 ---
 
 ## 2. Services & Tariffs

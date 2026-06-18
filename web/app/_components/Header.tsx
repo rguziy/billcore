@@ -3,11 +3,15 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { getUser, clearAuth } from "@/lib/auth";
+import { authApi } from "@/lib/api";
+import { useLang } from "./LangProvider";
+import { t, SUPPORTED_LANGUAGES } from "@/lib/i18n";
 import type { AuthUser } from "@/lib/auth";
 
 export default function Header() {
   const router   = useRouter();
   const pathname = usePathname();
+  const { lang, setLang } = useLang();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -21,6 +25,15 @@ export default function Header() {
     router.push("/login");
   };
 
+  const handleLanguageChange = async (newLang: string) => {
+    setLang(newLang as typeof lang);
+    try {
+      await authApi.setLanguage(newLang);
+    } catch (e) {
+      console.error("Failed to save language preference", e);
+    }
+  };
+
   if (!mounted || !user || pathname === "/login") return null;
 
   return (
@@ -30,7 +43,7 @@ export default function Header() {
       borderBottom: "1px solid #e2e8f0",
       display: "flex",
       alignItems: "center",
-      justifyContent: "flex-end",
+      justifyContent: "space-between",
       padding: "0 1.5rem",
       gap: "1rem",
     }}>
@@ -45,9 +58,26 @@ export default function Header() {
           {user.role}
         </span>
       </div>
-      <button className="btn btn-sm btn-outline-secondary" onClick={logout}>
-        <i className="bi bi-box-arrow-right me-1" />Logout
-      </button>
+
+      <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+        <select
+          className="form-select form-select-sm"
+          value={lang}
+          onChange={(e) => handleLanguageChange(e.target.value)}
+          style={{ width: "140px", fontSize: "0.875rem" }}
+          title={t("language.select", lang)}
+        >
+          {SUPPORTED_LANGUAGES.map((l) => (
+            <option key={l} value={l}>
+              {t(`language.${l}`, lang)}
+            </option>
+          ))}
+        </select>
+
+        <button className="btn btn-sm btn-outline-secondary" onClick={logout}>
+          <i className="bi bi-box-arrow-right me-1" />{t("header.logout", lang)}
+        </button>
+      </div>
     </div>
   );
 }

@@ -1,26 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/api";
-import { saveAuth, defaultPath } from "@/lib/auth";
+import { saveAuth, defaultPath, setPreferredLanguage } from "@/lib/auth";
+import { useLanguage, setLanguage, t, SUPPORTED_LANGUAGES, type Language } from "@/lib/i18n";
 
 export default function LoginPage() {
   const router = useRouter();
   const [form, setForm] = useState({ username: "", password: "" });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [lang, setLang] = useState<Language>("en");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const prefLang = (useLanguage() as Language) || "en";
+    setLang(prefLang);
+    document.documentElement.lang = prefLang;
+  }, []);
 
   const submit = async () => {
     if (!form.username || !form.password) {
-      setError("Username and password are required");
+      setError(t("auth.username_required", lang));
       return;
     }
     setLoading(true);
     setError(null);
     try {
       const res = await authApi.login(form.username, form.password);
+      const userLang = (res.user.preferred_language || lang) as Language;
       saveAuth(res.token, res.user);
+      setPreferredLanguage(userLang);
+      setLanguage(userLang);
       router.push(defaultPath());
     } catch (e: any) {
       setError(e.message);
@@ -32,6 +45,15 @@ export default function LoginPage() {
   const handleKey = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") submit();
   };
+
+  const handleLanguageChange = (newLang: string) => {
+    const language = newLang as Language;
+    setLang(language);
+    setLanguage(language);
+    document.documentElement.lang = language;
+  };
+
+  if (!mounted) return null;
 
   return (
     <div style={{
@@ -47,7 +69,7 @@ export default function LoginPage() {
             Bill<span style={{ color: "#1a56db" }}>Core</span>
           </div>
           <div style={{ color: "#64748b", fontSize: "0.875rem", marginTop: 4 }}>
-            Sign in to your account
+            {t("auth.signIn", lang)}
           </div>
         </div>
 
@@ -58,7 +80,7 @@ export default function LoginPage() {
         )}
 
         <div className="mb-3">
-          <label className="form-label">Username</label>
+          <label className="form-label">{t("auth.username", lang)}</label>
           <input
             className="form-control"
             autoFocus
@@ -68,7 +90,7 @@ export default function LoginPage() {
           />
         </div>
         <div className="mb-4">
-          <label className="form-label">Password</label>
+          <label className="form-label">{t("auth.password", lang)}</label>
           <input
             className="form-control"
             type="password"
@@ -76,6 +98,21 @@ export default function LoginPage() {
             onChange={(e) => setForm({ ...form, password: e.target.value })}
             onKeyDown={handleKey}
           />
+        </div>
+
+        <div className="mb-4">
+          <label className="form-label">{t("language.select", lang)}</label>
+          <select
+            className="form-select"
+            value={lang}
+            onChange={(e) => handleLanguageChange(e.target.value)}
+          >
+            {SUPPORTED_LANGUAGES.map((l) => (
+              <option key={l} value={l}>
+                {t(`language.${l}`, lang)}
+              </option>
+            ))}
+          </select>
         </div>
 
         <button
@@ -88,7 +125,7 @@ export default function LoginPage() {
           ) : (
             <i className="bi bi-box-arrow-in-right me-2" />
           )}
-          Sign in
+          {t("auth.signin_button", lang)}
         </button>
       </div>
     </div>

@@ -29,6 +29,17 @@ func NewAuthService(userRepo *repository.UserRepo, jwtSecret string) *AuthServic
 	return &AuthService{userRepo: userRepo, jwtSecret: jwtSecret}
 }
 
+func (s *AuthService) GetUserByID(ctx context.Context, id int) (*domain.User, error) {
+	return s.userRepo.GetByID(ctx, id)
+}
+
+func (s *AuthService) SetLanguage(ctx context.Context, id int, language string) error {
+	if !domain.IsSupportedLanguage(language) {
+		return fmt.Errorf("unsupported language: %s", language)
+	}
+	return s.userRepo.SetPreferredLanguage(ctx, id, domain.Language(language))
+}
+
 // Login verifies credentials and returns a signed JWT.
 func (s *AuthService) Login(ctx context.Context, username, password string) (string, *domain.User, error) {
 	user, err := s.userRepo.GetByUsername(ctx, username)

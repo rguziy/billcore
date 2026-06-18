@@ -43,6 +43,7 @@ func NewRouter(
 		r.Use(middleware.Auth(jwtSecret))
 
 		r.Get("/auth/me", auth.Me)
+		r.Patch("/auth/language", auth.SetLanguage)
 
 		// ── Admin only ─────────────────────────────────────────────
 		r.Group(func(r chi.Router) {

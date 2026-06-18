@@ -1,17 +1,22 @@
 const TOKEN_KEY = "billcore_token";
 const USER_KEY  = "billcore_user";
+const LANG_KEY  = "preferred_language";
 
 export interface AuthUser {
   id: number;
   username: string;
   email?: string;
   role: "admin" | "manager" | "operator";
+  preferred_language?: string;
 }
 
 export function saveAuth(token: string, user: AuthUser) {
   if (typeof window === "undefined") return;
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(USER_KEY, JSON.stringify(user));
+  if (user.preferred_language) {
+    localStorage.setItem(LANG_KEY, user.preferred_language);
+  }
 }
 
 export function getToken(): string | null {
@@ -24,6 +29,16 @@ export function getUser(): AuthUser | null {
   const raw = localStorage.getItem(USER_KEY);
   if (!raw) return null;
   try { return JSON.parse(raw); } catch { return null; }
+}
+
+export function getPreferredLanguage(): string {
+  if (typeof window === "undefined") return "en";
+  return localStorage.getItem(LANG_KEY) ?? "en";
+}
+
+export function setPreferredLanguage(language: string): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(LANG_KEY, language);
 }
 
 export function clearAuth() {

@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { servicesApi } from "@/lib/api";
+import { useLang } from "@/app/_components/LangProvider";
+import { t } from "@/lib/i18n";
 import type { Service, Tariff } from "@/types";
 import Modal from "@/app/_components/Modal";
 import Alert from "@/app/_components/Alert";
@@ -16,6 +18,7 @@ const emptyTariff = () => ({
 const toDateInput = (value?: string) => value ? value.split("T")[0] : "";
 
 export default function ServicesPage() {
+  const { lang } = useLang();
   const [services, setServices] = useState<Service[]>([]);
   // active tariff per service — loaded upfront for table display
   const [activeTariffs, setActiveTariffs] = useState<Record<number, Tariff | null>>({});

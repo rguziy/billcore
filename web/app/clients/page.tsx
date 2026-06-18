@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { clientsApi } from "@/lib/api";
+import { useLang } from "@/app/_components/LangProvider";
+import { t } from "@/lib/i18n";
 import type { Client, ClientPage } from "@/types";
 import Modal from "@/app/_components/Modal";
 import Alert from "@/app/_components/Alert";
@@ -13,6 +15,7 @@ const empty = (): Partial<Client> => ({ full_name: "", phone: "", email: "", acc
 const LIMIT = 20;
 
 export default function ClientsPage() {
+  const { lang } = useLang();
   const [page, setPage]       = useState<ClientPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);

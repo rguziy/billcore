@@ -4,51 +4,56 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getUser } from "@/lib/auth";
+import { useLang } from "./LangProvider";
+import { t, type Language } from "@/lib/i18n";
 import type { AuthUser } from "@/lib/auth";
 
 type Role = "admin" | "manager" | "operator";
 
 interface NavItem {
   href: string;
-  label: string;
+  label_key: string; // i18n key
   icon: string;
-  roles: Role[]; // which roles can see this item
+  roles: Role[];
 }
 
-const operatorNav: NavItem[] = [
-  { href: "/clients",       label: "Clients",       icon: "bi-people",      roles: ["admin","manager","operator"] },
-  { href: "/locations",     label: "Locations",     icon: "bi-geo-alt",     roles: ["admin","manager","operator"] },
-  { href: "/subscriptions", label: "Subscriptions", icon: "bi-link-45deg",  roles: ["admin","manager","operator"] },
-  { href: "/calculations",  label: "Calculations",  icon: "bi-calculator",  roles: ["admin","manager","operator"] },
-];
+function getNavItems(lang: Language): { operator: NavItem[]; manager: NavItem[]; admin: NavItem[] } {
+  return {
+    operator: [
+      { href: "/clients",       label_key: "sidebar.clients",       icon: "bi-people",      roles: ["admin","manager","operator"] },
+      { href: "/locations",     label_key: "sidebar.locations",     icon: "bi-geo-alt",     roles: ["admin","manager","operator"] },
+      { href: "/subscriptions", label_key: "sidebar.subscriptions", icon: "bi-link-45deg",  roles: ["admin","manager","operator"] },
+      { href: "/calculations",  label_key: "sidebar.calculations",  icon: "bi-calculator",  roles: ["admin","manager","operator"] },
+    ],
+    manager: [
+      { href: "/statistics",    label_key: "sidebar.statistics",    icon: "bi-bar-chart-line", roles: ["admin","manager"] },
+      { href: "/services",      label_key: "sidebar.services",      icon: "bi-grid",           roles: ["admin","manager"] },
+      { href: "/periods",       label_key: "sidebar.periods",       icon: "bi-calendar3",      roles: ["admin","manager"] },
+    ],
+    admin: [
+      { href: "/users",         label_key: "sidebar.users",         icon: "bi-person-gear", roles: ["admin"] },
+    ],
+  };
+}
 
-const managerNav: NavItem[] = [
-  { href: "/statistics",    label: "Statistics",    icon: "bi-bar-chart-line", roles: ["admin","manager"] },
-  { href: "/services",      label: "Services",      icon: "bi-grid",           roles: ["admin","manager"] },
-  { href: "/periods",       label: "Periods",       icon: "bi-calendar3",      roles: ["admin","manager"] },
-];
-
-const adminNav: NavItem[] = [
-  { href: "/users",         label: "Users",         icon: "bi-person-gear", roles: ["admin"] },
-];
-
-function NavGroup({ title, items, pathname, role }: {
-  title?: string;
+function NavGroup({ title_key, items, pathname, role, lang }: {
+  title_key?: string;
   items: NavItem[];
   pathname: string;
   role: Role;
+  lang: Language;
 }) {
   const visible = items.filter((i) => i.roles.includes(role));
   if (visible.length === 0) return null;
   return (
     <>
-      {title && (
+      {title_key && (
         <div style={{
           fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.08em",
           color: "#475569", padding: "0.75rem 1.25rem 0.25rem", marginTop: "0.25rem",
           borderTop: "1px solid #1e293b",
         }}>
-          {title}
+          {t(title_key, lang)}
         </div>
       )}
       {visible.map((item) => (
@@ -61,7 +66,7 @@ function NavGroup({ title, items, pathname, role }: {
             }`}
           >
             <i className={`bi ${item.icon}`} />
-            {item.label}
+            {t(item.label_key, lang)}
           </Link>
         </li>
       ))}
@@ -71,17 +76,21 @@ function NavGroup({ title, items, pathname, role }: {
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { lang } = useLang();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => { setMounted(true); setUser(getUser()); }, [pathname]);
+  useEffect(() => {
+    setMounted(true);
+    setUser(getUser());
+  }, [pathname]);
 
-  // Hide on login page — before any other check
   if (pathname === "/login" || pathname === "/login/") return null;
 
   if (!mounted) return <nav className="bc-sidebar" style={{ width: 240 }} />;
 
   const role: Role = (user?.role as Role) ?? "operator";
+  const navItems = getNavItems(lang);
 
   return (
     <nav className="bc-sidebar d-flex flex-column">
@@ -89,24 +98,27 @@ export default function Sidebar() {
       <ul className="nav flex-column mt-2 flex-grow-1">
 
         <NavGroup
-          title="Operations"
-          items={operatorNav}
+          title_key="sidebar.operations"
+          items={navItems.operator}
           pathname={pathname}
           role={role}
+          lang={lang}
         />
 
         <NavGroup
-          title="Management"
-          items={managerNav}
+          title_key="sidebar.management"
+          items={navItems.manager}
           pathname={pathname}
           role={role}
+          lang={lang}
         />
 
         <NavGroup
-          title="Administration"
-          items={adminNav}
+          title_key="sidebar.administration"
+          items={navItems.admin}
           pathname={pathname}
           role={role}
+          lang={lang}
         />
 
       </ul>

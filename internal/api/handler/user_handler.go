@@ -45,10 +45,11 @@ func (h *UserHandler) Get(w http.ResponseWriter, r *http.Request) {
 // Body: { "username": "...", "email": "...", "password": "...", "role": "operator" }
 func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Username string          `json:"username"`
-		Email    string          `json:"email"`
-		Password string          `json:"password"`
-		Role     domain.UserRole `json:"role"`
+		Username          string          `json:"username"`
+		Email             string          `json:"email"`
+		Password          string          `json:"password"`
+		Role              domain.UserRole `json:"role"`
+		PreferredLanguage string          `json:"preferred_language"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, err, http.StatusBadRequest)
@@ -62,10 +63,11 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	u := &domain.User{
-		Username:     body.Username,
-		Email:        body.Email,
-		PasswordHash: hash,
-		Role:         body.Role,
+		Username:          body.Username,
+		Email:             body.Email,
+		PasswordHash:      hash,
+		Role:              body.Role,
+		PreferredLanguage: domain.Language(body.PreferredLanguage),
 	}
 	if u.Role == "" {
 		u.Role = domain.RoleOperator
@@ -86,15 +88,22 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		Username string          `json:"username"`
-		Email    string          `json:"email"`
-		Role     domain.UserRole `json:"role"`
+		Username          string          `json:"username"`
+		Email             string          `json:"email"`
+		Role              domain.UserRole `json:"role"`
+		PreferredLanguage string          `json:"preferred_language"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, err, http.StatusBadRequest)
 		return
 	}
-	u := &domain.User{ID: id, Username: body.Username, Email: body.Email, Role: body.Role}
+	u := &domain.User{
+		ID:                id,
+		Username:          body.Username,
+		Email:             body.Email,
+		Role:              body.Role,
+		PreferredLanguage: domain.Language(body.PreferredLanguage),
+	}
 	if err := h.repo.Update(r.Context(), u); err != nil {
 		writeError(w, err, http.StatusInternalServerError)
 		return

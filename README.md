@@ -48,6 +48,7 @@ billcore/
 | Migrations | golang-migrate (embedded in binary, auto-run on start) |
 | Frontend   | Next.js 15 (static export), Bootstrap 5  |
 | Auth       | JWT (HS256), role-based (admin/manager/operator) |
+| Localization | UI translations, Ukrainian + English, preferred language persisted per user |
 
 ---
 
@@ -62,6 +63,8 @@ billcore/
 | Users (CRUD)                                   | ❌       | ❌      | ✅    |
 
 Default pages after login: **Operator** → `/clients`, **Manager** → `/statistics`, **Admin** → `/users`
+
+> UI supports English and Ukrainian. Users can select their preferred language, which is stored in their profile and applied automatically after login.
 
 ---
 
