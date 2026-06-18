@@ -2,8 +2,11 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rguziy/billcore/internal/domain"
 )
@@ -97,11 +100,50 @@ func (r *ServiceRepo) GetActiveTariff(ctx context.Context, serviceID int) (*doma
 }
 
 func (r *ServiceRepo) CreateTariff(ctx context.Context, t *domain.Tariff) error {
-	return r.db.QueryRow(ctx, `
+	if t.ValidTo == nil && t.ValidFrom.Before(time.Now().Truncate(24*time.Hour)) {
+		return fmt.Errorf("valid_from must not be in the past for an active tariff")
+	}
+
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	if t.ValidTo == nil {
+		var activeValidFrom time.Time
+		err = tx.QueryRow(ctx, `
+			SELECT valid_from FROM billcore.tariffs
+			WHERE service_id = $1 AND valid_to IS NULL
+		`, t.ServiceID).Scan(&activeValidFrom)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return err
+		}
+		if !activeValidFrom.IsZero() && !t.ValidFrom.After(activeValidFrom) {
+			return fmt.Errorf("valid_from must be after the current active tariff's valid_from (%s)",
+				activeValidFrom.Format("2006-01-02"))
+		}
+
+		_, err = tx.Exec(ctx, `
+			UPDATE billcore.tariffs
+			SET valid_to = $2::date - INTERVAL '1 day'
+			WHERE service_id = $1 AND valid_to IS NULL
+		`, t.ServiceID, t.ValidFrom)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = tx.QueryRow(ctx, `
 		INSERT INTO billcore.tariffs (service_id, price_per_unit, valid_from, valid_to, note)
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id
 	`, t.ServiceID, t.PricePerUnit, t.ValidFrom, t.ValidTo, t.Note).Scan(&t.ID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (r *ServiceRepo) UpdateTariff(ctx context.Context, t *domain.Tariff) error {
