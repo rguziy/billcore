@@ -68,6 +68,32 @@ Default pages after login: **Operator** → `/clients`, **Manager** → `/statis
 
 ---
 
+## 📺 User Interface Preview
+
+Discover the look and feel of the BillCore UI, packed with features for billing and management (using realistic demo data):
+
+### 🔑 Sign-In Page (Multi-language Support)
+Allows users to switch languages (English/Ukrainian) before authenticating. The selected language is instantly saved to the user's profile.
+![Sign-In Page](docs/login.png)
+
+### 📊 Real-Time Statistics & Dashboard
+Provides managers and admins with a complete financial and structural overview of the current billing period, active users, and service statuses at a glance.
+![Dashboard](docs/statistics.png)
+
+### ⚙️ Services & Tariffs Management
+The control panel for configuring billing units and meter options. Features a clear history of tariff changes and visual alerts for missing rates.
+![Services list](docs/services.png)
+
+### 🧮 Daily Operations & Billing Calculations
+The primary workspace for operators. Easily filter calculations by period or client, input current meter readings with live volume calculation, and track payment status.
+![Calculations and Meter Readings](docs/calculations.png)
+
+### 👤 Client Management & Profiles
+A comprehensive view of client records, including contact information, physical locations, service subscriptions, and detailed payment history.
+![Client Details](docs/detail.png)
+
+---
+
 ## 🚀 Getting started (local development)
 
 ### 1. Clone
