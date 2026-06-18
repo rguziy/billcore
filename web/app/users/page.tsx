@@ -121,38 +121,38 @@ export default function UsersPage() {
                   <td className="ps-3 fw-semibold">
                     {u.username}
                     {u.id === me?.id && (
-                      <span className="badge ms-2" style={{ background: "#e0f2fe", color: "#0369a1", fontSize: "0.7rem" }}>you</span>
+                      <span className="badge ms-2" style={{ background: "#e0f2fe", color: "#0369a1", fontSize: "0.7rem" }}>{t("common.you", lang)}</span>
                     )}
                   </td>
                   <td>{u.email || "—"}</td>
                   <td>
                     <span className="badge" style={{ background: roleColor[u.role] + "22", color: roleColor[u.role] }}>
-                      {u.role}
+                      {t(`users.${u.role}`, lang)}
                     </span>
                   </td>
                   <td>
                     {u.is_active
                       ? <span className="badge badge-paid">{t("common.active", lang)}</span>
-                      : <span className="badge badge-cancelled">Blocked</span>}
+                      : <span className="badge badge-cancelled">{t("common.blocked", lang)}</span>}
                   </td>
                   <td style={{ fontSize: "0.85rem" }}>{new Date(u.created_at).toLocaleDateString()}</td>
                   <td className="text-end pe-3">
-                    <button className="btn btn-sm btn-outline-secondary me-1" title="Edit"
+                    <button className="btn btn-sm btn-outline-secondary me-1" title={t("common.edit", lang)}
                       onClick={() => { setEditUser(u); setEditForm({ username: u.username, email: u.email ?? "", role: u.role }); }}>
                       <i className="bi bi-pencil" />
                     </button>
-                    <button className="btn btn-sm btn-outline-secondary me-1" title="Change password"
+                    <button className="btn btn-sm btn-outline-secondary me-1" title={t("users.change_password", lang)}
                       onClick={() => { setPwdId(u.id); setPwdVal(""); }}>
                       <i className="bi bi-key" />
                     </button>
                     <button
                       className={`btn btn-sm me-1 ${u.is_active ? "btn-outline-warning" : "btn-outline-success"}`}
-                      title={u.is_active ? "Block" : "Unblock"}
+                      title={u.is_active ? t("users.block", lang) : t("users.unblock", lang)}
                       disabled={u.id === me?.id}
                       onClick={() => toggleBlock(u)}>
                       <i className={`bi bi-${u.is_active ? "slash-circle" : "check-circle"}`} />
                     </button>
-                    <button className="btn btn-sm btn-outline-danger" title="Delete"
+                    <button className="btn btn-sm btn-outline-danger" title={t("common.delete", lang)}
                       disabled={u.id === me?.id}
                       onClick={() => setDeleteId(u.id)}>
                       <i className="bi bi-trash" />
@@ -186,9 +186,9 @@ export default function UsersPage() {
           <label className="form-label">{t("users.role", lang)}</label>
           <select className="form-select" value={createForm.role}
             onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}>
-            <option value="operator">Operator</option>
-            <option value="manager">Manager</option>
-            <option value="admin">Admin</option>
+            <option value="operator">{t("users.operator", lang)}</option>
+            <option value="manager">{t("users.manager", lang)}</option>
+            <option value="admin">{t("users.admin", lang)}</option>
           </select>
         </div>
       </Modal>
@@ -209,9 +209,9 @@ export default function UsersPage() {
           <label className="form-label">{t("users.role", lang)}</label>
           <select className="form-select" value={editForm.role}
             onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}>
-            <option value="operator">Operator</option>
-            <option value="manager">Manager</option>
-            <option value="admin">Admin</option>
+            <option value="operator">{t("users.operator", lang)}</option>
+            <option value="manager">{t("users.manager", lang)}</option>
+            <option value="admin">{t("users.admin", lang)}</option>
           </select>
         </div>
       </Modal>
@@ -228,9 +228,9 @@ export default function UsersPage() {
       {/* Delete confirm */}
       <Modal title={t("users.delete_confirm", lang)} show={deleteId !== null} onClose={() => setDeleteId(null)}
         onConfirm={confirmDelete} confirmLabel={t("common.delete", lang)} confirmVariant="danger">
-        <p>Delete this user?</p>
+        <p>{t("users.delete_confirm", lang)}</p>
         <p className="text-muted mb-0" style={{ fontSize: "0.875rem" }}>
-          Only possible if the user has no action history in the system.
+          {t("users.delete_help", lang)}
         </p>
       </Modal>
     </>

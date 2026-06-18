@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useLang } from "@/app/_components/LangProvider";
+import { t } from "@/lib/i18n";
 
 interface Props {
   title: string;
@@ -13,8 +15,9 @@ interface Props {
 }
 
 export default function Modal({
-  title, show, onClose, onConfirm, confirmLabel = "Save", confirmVariant = "primary", children,
+  title, show, onClose, onConfirm, confirmLabel, confirmVariant = "primary", children,
 }: Props) {
+  const { lang } = useLang();
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -38,8 +41,8 @@ export default function Modal({
           <div className="modal-body">{children}</div>
           {onConfirm && (
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-              <button className={`btn btn-${confirmVariant}`} onClick={onConfirm}>{confirmLabel}</button>
+              <button className="btn btn-secondary" onClick={onClose}>{t("common.cancel", lang)}</button>
+              <button className={`btn btn-${confirmVariant}`} onClick={onConfirm}>{confirmLabel ?? t("common.save", lang)}</button>
             </div>
           )}
         </div>

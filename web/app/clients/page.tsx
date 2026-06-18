@@ -98,9 +98,9 @@ export default function ClientsPage() {
   return (
     <>
       <div className="bc-page-header">
-        <h1>Clients</h1>
+        <h1>{t("clients.title", lang)}</h1>
         <button className="btn btn-primary btn-sm" onClick={openCreate}>
-          <i className="bi bi-plus-lg me-1" /> New Client
+          <i className="bi bi-plus-lg me-1" /> {t("clients.new", lang)}
         </button>
       </div>
 
@@ -110,28 +110,28 @@ export default function ClientsPage() {
       <div className="bc-card">
         <div className="row g-2 align-items-end">
           <div className="col-md-5">
-            <label className="form-label">Search by name or account number</label>
+            <label className="form-label">{t("common.search", lang)}</label>
             <input className="form-control" placeholder="e.g. Bob or BC-12345678"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={handleKey} />
           </div>
           <div className="col-md-2">
-            <label className="form-label">Status</label>
+            <label className="form-label">{t("common.status", lang)}</label>
             <select className="form-select" value={statusInput}
               onChange={(e) => setStatusInput(e.target.value)}>
-              <option value="">All</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="">{t("common.all", lang)}</option>
+              <option value="active">{t("common.active", lang)}</option>
+              <option value="inactive">{t("common.inactive", lang)}</option>
             </select>
           </div>
           <div className="col-md-auto d-flex gap-2">
             <button className="btn btn-primary" onClick={applySearch}>
-              <i className="bi bi-search me-1" />Search
+              <i className="bi bi-search me-1" />{t("common.search", lang)}
             </button>
             {(search || status) && (
               <button className="btn btn-outline-secondary" onClick={clearSearch}>
-                <i className="bi bi-x me-1" />Clear
+                <i className="bi bi-x me-1" />{t("common.clear", lang)}
               </button>
             )}
           </div>
@@ -139,7 +139,7 @@ export default function ClientsPage() {
             {page && (
               <span className="text-muted" style={{ fontSize: "0.82rem" }}>
                 {total === 0
-                  ? "No clients found"
+                  ? t("clients.no_clients", lang)
                   : total > LIMIT
                     ? `Showing ${offset + 1}–${showing} of ${total} clients (limit ${LIMIT})`
                     : `${total} client${total !== 1 ? "s" : ""}`}
@@ -152,22 +152,22 @@ export default function ClientsPage() {
       {/* Table */}
       <div className="bc-card p-0">
         {loading ? (
-          <div className="p-4 text-center text-muted">Loading...</div>
+          <div className="p-4 text-center text-muted">{t("common.loading", lang)}</div>
         ) : (
           <>
             <table className="table bc-table mb-0">
               <thead>
                 <tr>
-                  <th className="ps-3">Account</th>
-                  <th>Name</th>
-                  <th>Phone</th>
-                  <th>Status</th>
+                  <th className="ps-3">{t("clients.account_number", lang)}</th>
+                  <th>{t("clients.full_name", lang)}</th>
+                  <th>{t("clients.phone", lang)}</th>
+                  <th>{t("common.status", lang)}</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
                 {clients.length === 0 && (
-                  <tr><td colSpan={5} className="text-center text-muted p-4">No clients found</td></tr>
+                  <tr><td colSpan={5} className="text-center text-muted p-4">{t("clients.no_clients", lang)}</td></tr>
                 )}
                 {clients.map((c) => (
                   <tr key={c.id}>
@@ -180,21 +180,21 @@ export default function ClientsPage() {
                     <td>{c.phone || "—"}</td>
                     <td>
                       <span className={`badge ${c.is_active ? "badge-paid" : "badge-cancelled"}`}>
-                        {c.is_active ? "Active" : "Inactive"}
+                        {c.is_active ? t("common.active", lang) : t("common.inactive", lang)}
                       </span>
                     </td>
                     <td className="text-end pe-3">
                       {/* Quick access */}
                       <Link href={`/locations?client_id=${c.id}`}
-                        className="btn btn-sm btn-outline-secondary me-1" title="Locations">
+                        className="btn btn-sm btn-outline-secondary me-1" title={t("locations.title", lang)}>
                         <i className="bi bi-geo-alt" />
                       </Link>
                       <Link href={`/subscriptions?client_id=${c.id}`}
-                        className="btn btn-sm btn-outline-secondary me-1" title="Subscriptions">
+                        className="btn btn-sm btn-outline-secondary me-1" title={t("subscriptions.title", lang)}>
                         <i className="bi bi-link-45deg" />
                       </Link>
                       <Link href={`/calculations?client_id=${c.id}`}
-                        className="btn btn-sm btn-outline-secondary me-1" title="Calculations">
+                        className="btn btn-sm btn-outline-secondary me-1" title={t("calculations.title", lang)}>
                         <i className="bi bi-calculator" />
                       </Link>
                       <button className="btn btn-sm btn-outline-secondary me-1" onClick={() => openEdit(c)}>
@@ -215,14 +215,14 @@ export default function ClientsPage() {
                 style={{ borderTop: "1px solid #e2e8f0" }}>
                 <button className="btn btn-sm btn-outline-secondary"
                   disabled={!hasPrev} onClick={() => setOffset(offset - LIMIT)}>
-                  <i className="bi bi-chevron-left me-1" />Prev
+                  <i className="bi bi-chevron-left me-1" />{t("common.prev", lang)}
                 </button>
                 <span style={{ fontSize: "0.85rem", color: "#64748b" }}>
-                  Page {curPage} of {pages}
+                  {t("common.page", lang)} {curPage} {t("common.of", lang)} {pages}
                 </span>
                 <button className="btn btn-sm btn-outline-secondary"
                   disabled={!hasMore} onClick={() => setOffset(offset + LIMIT)}>
-                  Next<i className="bi bi-chevron-right ms-1" />
+                  {t("common.next", lang)}<i className="bi bi-chevron-right ms-1" />
                 </button>
               </div>
             )}
@@ -231,36 +231,36 @@ export default function ClientsPage() {
       </div>
 
       {/* Create / Edit modal */}
-      <Modal title={isEdit ? "Edit Client" : "New Client"}
+      <Modal title={isEdit ? t("common.edit", lang) + " " + t("clients.title", lang) : t("clients.new", lang)}
         show={showModal} onClose={() => setShowModal(false)} onConfirm={save}>
         <div className="mb-3">
-          <label className="form-label">Full name *</label>
+          <label className="form-label">{t("clients.full_name", lang)} *</label>
           <input className="form-control" value={editing.full_name ?? ""}
             onChange={(e) => setEditing({ ...editing, full_name: e.target.value })} />
         </div>
         <div className="mb-3">
-          <label className="form-label">Account number *</label>
+          <label className="form-label">{t("clients.account_number", lang)} *</label>
           {isEdit ? (
             <input className="form-control" value={editing.account_number ?? ""} readOnly disabled />
           ) : (
             <div className="input-group">
               <input className="form-control" value={editing.account_number ?? ""}
                 onChange={(e) => setEditing({ ...editing, account_number: e.target.value })} />
-              <button className="btn btn-outline-secondary" type="button" title="Generate new"
+              <button className="btn btn-outline-secondary" type="button" title={t("common.generate_new", lang)}
                 onClick={() => setEditing({ ...editing, account_number: generateAccountNumber() })}>
                 <i className="bi bi-arrow-clockwise" />
               </button>
             </div>
           )}
-          {isEdit && <div className="form-text">Account number cannot be changed after creation.</div>}
+          {isEdit && <div className="form-text">{t("clients.account_readonly", lang)}</div>}
         </div>
         <div className="mb-3">
-          <label className="form-label">Phone</label>
+          <label className="form-label">{t("clients.phone", lang)}</label>
           <input className="form-control" value={editing.phone ?? ""}
             onChange={(e) => setEditing({ ...editing, phone: e.target.value })} />
         </div>
         <div className="mb-3">
-          <label className="form-label">Email</label>
+          <label className="form-label">{t("clients.email", lang)}</label>
           <input className="form-control" type="email" value={editing.email ?? ""}
             onChange={(e) => setEditing({ ...editing, email: e.target.value })} />
         </div>
@@ -269,16 +269,16 @@ export default function ClientsPage() {
             <input className="form-check-input" type="checkbox" id="isActive"
               checked={editing.is_active ?? true}
               onChange={(e) => setEditing({ ...editing, is_active: e.target.checked })} />
-            <label className="form-check-label" htmlFor="isActive">Active</label>
+            <label className="form-check-label" htmlFor="isActive">{t("common.active", lang)}</label>
           </div>
         )}
       </Modal>
 
       {/* Delete confirm */}
-      <Modal title="Delete Client" show={deleteId !== null}
+      <Modal title={`${t("common.delete", lang)} ${t("clients.title", lang)}`} show={deleteId !== null}
         onClose={() => setDeleteId(null)} onConfirm={confirmDelete}
-        confirmLabel="Delete" confirmVariant="danger">
-        Are you sure you want to delete this client? This action cannot be undone.
+        confirmLabel={t("common.delete", lang)} confirmVariant="danger">
+        {t("clients.delete_help", lang)}
       </Modal>
     </>
   );

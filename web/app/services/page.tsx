@@ -159,9 +159,9 @@ export default function ServicesPage() {
   return (
     <>
       <div className="bc-page-header">
-        <h1>Services</h1>
+        <h1>{t("services.title", lang)}</h1>
         <button className="btn btn-primary btn-sm" onClick={openCreate}>
-          <i className="bi bi-plus-lg me-1" /> New Service
+          <i className="bi bi-plus-lg me-1" /> {t("services.new", lang)}
         </button>
       </div>
 
@@ -169,21 +169,21 @@ export default function ServicesPage() {
 
       <div className="bc-card p-0">
         {loading ? (
-          <div className="p-4 text-center text-muted">Loading...</div>
+          <div className="p-4 text-center text-muted">{t("common.loading", lang)}</div>
         ) : (
           <table className="table bc-table mb-0">
             <thead>
               <tr>
-                <th className="ps-3">Name</th>
-                <th>Unit</th>
-                <th>Meter</th>
-                <th>Current tariff</th>
+                <th className="ps-3">{t("services.name", lang)}</th>
+                <th>{t("services.unit", lang)}</th>
+                <th>{t("services.meter", lang)}</th>
+                <th>{t("services.current_tariff", lang)}</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {services.length === 0 && (
-                <tr><td colSpan={5} className="text-center text-muted p-4">No services yet</td></tr>
+                <tr><td colSpan={5} className="text-center text-muted p-4">{t("services.no_services", lang)}</td></tr>
               )}
               {services.map((s) => {
                 const active = activeTariffs[s.id];
@@ -194,8 +194,8 @@ export default function ServicesPage() {
                       <td><code>{s.unit}</code></td>
                       <td>
                         {s.has_meter
-                          ? <span className="badge badge-paid">Yes</span>
-                          : <span className="badge" style={{ background: "#f1f5f9", color: "#64748b" }}>No</span>}
+                          ? <span className="badge badge-paid">{t("common.yes", lang)}</span>
+                          : <span className="badge" style={{ background: "#f1f5f9", color: "#64748b" }}>{t("common.no", lang)}</span>}
                       </td>
                       <td>
                         {active
@@ -203,24 +203,24 @@ export default function ServicesPage() {
                             <span>
                               <strong>{active.price_per_unit}</strong>
                               <span className="text-muted ms-1" style={{ fontSize: "0.8rem" }}>
-                                / {s.unit} · from {new Date(active.valid_from).toLocaleDateString()}
+                                / {s.unit} · {t("common.from", lang)} {new Date(active.valid_from).toLocaleDateString()}
                               </span>
                             </span>
                           )
                           : (
                             <span style={{ color: "#dc2626", fontSize: "0.85rem" }}>
                               <i className="bi bi-exclamation-triangle me-1" />
-                              No active tariff
+                              {t("services.no_active_tariff", lang)}
                             </span>
                           )
                         }
                       </td>
                       <td className="text-end pe-3">
-                        <button className="btn btn-sm btn-outline-secondary me-1" title="Tariff history"
+                        <button className="btn btn-sm btn-outline-secondary me-1" title={t("services.tariff_history", lang)}
                           onClick={() => toggleExpand(s)}>
                           <i className={`bi bi-clock-history`} />
                         </button>
-                        <button className="btn btn-sm btn-outline-primary me-1" title="Add tariff"
+                        <button className="btn btn-sm btn-outline-primary me-1" title={t("services.add_tariff", lang)}
                           onClick={() => openTariffCreate(s.id)}>
                           <i className="bi bi-plus-lg" />
                         </button>
@@ -235,38 +235,38 @@ export default function ServicesPage() {
                     {expanded === s.id && (
                       <tr style={{ background: "#f8fafc" }}>
                         <td colSpan={5} className="px-4 py-3">
-                          <strong style={{ fontSize: "0.85rem" }}>Tariff history</strong>
+                          <strong style={{ fontSize: "0.85rem" }}>{t("services.tariff_history", lang)}</strong>
                           {!tariffs[s.id]?.length ? (
-                            <div className="text-muted mt-2" style={{ fontSize: "0.85rem" }}>No tariffs</div>
+                            <div className="text-muted mt-2" style={{ fontSize: "0.85rem" }}>{t("services.no_tariffs", lang)}</div>
                           ) : (
                             <table className="table table-sm mt-2 mb-0">
                               <thead>
                                 <tr>
-                                  <th>Price / unit</th>
-                                  <th>Valid from</th>
-                                  <th>Valid to</th>
-                                  <th>Note</th>
+                                  <th>{t("services.price_per_unit", lang)}</th>
+                                  <th>{t("services.valid_from", lang)}</th>
+                                  <th>{t("services.valid_to", lang)}</th>
+                                  <th>{t("services.note", lang)}</th>
                                   <th></th>
                                 </tr>
                               </thead>
                               <tbody>
-                                {tariffs[s.id].map((t) => (
-                                  <tr key={t.id}>
-                                    <td><strong>{t.price_per_unit}</strong></td>
-                                    <td>{new Date(t.valid_from).toLocaleDateString()}</td>
+                                {tariffs[s.id].map((tariff) => (
+                                  <tr key={tariff.id}>
+                                    <td><strong>{tariff.price_per_unit}</strong></td>
+                                    <td>{new Date(tariff.valid_from).toLocaleDateString()}</td>
                                     <td>
-                                      {t.valid_to
-                                        ? new Date(t.valid_to).toLocaleDateString()
-                                        : <span className="badge badge-paid">Active</span>}
+                                      {tariff.valid_to
+                                        ? new Date(tariff.valid_to).toLocaleDateString()
+                                        : <span className="badge badge-paid">{t("common.active", lang)}</span>}
                                     </td>
-                                    <td>{t.note || "—"}</td>
+                                    <td>{tariff.note || "—"}</td>
                                     <td className="text-end">
                                       <button className="btn btn-sm btn-outline-secondary me-1"
-                                        onClick={() => openTariffEdit(t)}>
+                                        onClick={() => openTariffEdit(tariff)}>
                                         <i className="bi bi-pencil" />
                                       </button>
                                       <button className="btn btn-sm btn-outline-danger"
-                                        onClick={() => setDeleteTariffId(t.id)}>
+                                        onClick={() => setDeleteTariffId(tariff.id)}>
                                         <i className="bi bi-trash" />
                                       </button>
                                     </td>
@@ -288,18 +288,18 @@ export default function ServicesPage() {
 
       {/* Service modal */}
       <Modal
-        title={isEditSvc ? "Edit Service" : "New Service"}
+        title={isEditSvc ? t("services.edit", lang) : t("services.new", lang)}
         show={showSvcModal}
         onClose={() => setShowSvcModal(false)}
         onConfirm={saveSvc}
       >
         <div className="mb-3">
-          <label className="form-label">Name *</label>
+          <label className="form-label">{t("services.name", lang)} *</label>
           <input className="form-control" value={editingSvc.name ?? ""}
             onChange={(e) => setEditingSvc({ ...editingSvc, name: e.target.value })} />
         </div>
         <div className="mb-3">
-          <label className="form-label">Unit *</label>
+          <label className="form-label">{t("services.unit", lang)} *</label>
           <input className="form-control" placeholder="m³, kWh, month"
             value={editingSvc.unit ?? ""}
             onChange={(e) => setEditingSvc({ ...editingSvc, unit: e.target.value })} />
@@ -308,7 +308,7 @@ export default function ServicesPage() {
           <input className="form-check-input" type="checkbox" id="hasMeter"
             checked={editingSvc.has_meter ?? false}
             onChange={(e) => setEditingSvc({ ...editingSvc, has_meter: e.target.checked })} />
-          <label className="form-check-label" htmlFor="hasMeter">Has meter (reading required)</label>
+          <label className="form-check-label" htmlFor="hasMeter">{t("services.has_meter_required", lang)}</label>
         </div>
 
         {/* Initial tariff — only on create */}
@@ -320,29 +320,29 @@ export default function ServicesPage() {
                 checked={withTariff}
                 onChange={(e) => setWithTariff(e.target.checked)} />
               <label className="form-check-label fw-semibold" htmlFor="withTariff">
-                Set initial tariff now
+                {t("services.set_initial_tariff", lang)}
               </label>
-              <div className="form-text">Calculations cannot be generated without an active tariff.</div>
+              <div className="form-text">{t("services.tariff_required_help", lang)}</div>
             </div>
             {withTariff && (
               <>
                 <div className="mb-3">
-                  <label className="form-label">Price per unit *</label>
+                  <label className="form-label">{t("services.price_per_unit", lang)} *</label>
                   <input className="form-control" type="number" step="0.0001"
                     value={initTariff.price_per_unit || ""}
                     placeholder="e.g. 25.38"
                     onChange={(e) => setInitTariff({ ...initTariff, price_per_unit: Number(e.target.value) })} />
                 </div>
                 <div className="mb-3">
-                  <label className="form-label">Valid from *</label>
+                  <label className="form-label">{t("services.valid_from", lang)} *</label>
                   <input className="form-control" type="date"
                     value={initTariff.valid_from}
                     onChange={(e) => setInitTariff({ ...initTariff, valid_from: e.target.value })} />
                 </div>
                 <div className="mb-3">
-                  <label className="form-label">Note</label>
+                  <label className="form-label">{t("services.note", lang)}</label>
                   <input className="form-control" value={initTariff.note}
-                    placeholder="Optional"
+                    placeholder={t("common.optional", lang)}
                     onChange={(e) => setInitTariff({ ...initTariff, note: e.target.value })} />
                 </div>
               </>
@@ -352,50 +352,50 @@ export default function ServicesPage() {
       </Modal>
 
       {/* Delete service */}
-      <Modal title="Delete Service" show={deleteId !== null}
+      <Modal title={t("services.delete", lang)} show={deleteId !== null}
         onClose={() => setDeleteId(null)} onConfirm={confirmDelete}
-        confirmLabel="Delete" confirmVariant="danger">
-        Are you sure? All associated tariffs will also be deleted.
+        confirmLabel={t("common.delete", lang)} confirmVariant="danger">
+        {t("services.delete_help", lang)}
       </Modal>
 
       {/* Tariff modal */}
       <Modal
         title={editingTariff
-          ? `Edit Tariff — ${services.find((s) => s.id === tariffServiceId)?.name ?? ""}`
-          : `Add Tariff — ${services.find((s) => s.id === tariffServiceId)?.name ?? ""}`}
+          ? `${t("services.edit_tariff", lang)} — ${services.find((s) => s.id === tariffServiceId)?.name ?? ""}`
+          : `${t("services.add_tariff", lang)} — ${services.find((s) => s.id === tariffServiceId)?.name ?? ""}`}
         show={showTariffModal}
         onClose={() => { setShowTariffModal(false); setEditingTariff(null); }}
         onConfirm={saveTariff}
-        confirmLabel={editingTariff ? "Save" : "Create"}
+        confirmLabel={editingTariff ? t("common.save", lang) : t("common.create", lang)}
       >
         <div className="mb-3">
-          <label className="form-label">Price per unit *</label>
+          <label className="form-label">{t("services.price_per_unit", lang)} *</label>
           <input className="form-control" type="number" step="0.0001"
             value={tariffForm.price_per_unit}
             onChange={(e) => setTariffForm({ ...tariffForm, price_per_unit: Number(e.target.value) })} />
         </div>
         <div className="mb-3">
-          <label className="form-label">Valid from *</label>
+          <label className="form-label">{t("services.valid_from", lang)} *</label>
           <input className="form-control" type="date" value={tariffForm.valid_from}
             onChange={(e) => setTariffForm({ ...tariffForm, valid_from: e.target.value })} />
         </div>
         <div className="mb-3">
-          <label className="form-label">Valid to <span className="text-muted">(leave empty = active)</span></label>
+          <label className="form-label">{t("services.valid_to", lang)} <span className="text-muted">({t("services.valid_to_hint", lang)})</span></label>
           <input className="form-control" type="date" value={tariffForm.valid_to}
             onChange={(e) => setTariffForm({ ...tariffForm, valid_to: e.target.value })} />
         </div>
         <div className="mb-3">
-          <label className="form-label">Note</label>
+          <label className="form-label">{t("services.note", lang)}</label>
           <input className="form-control" value={tariffForm.note}
             onChange={(e) => setTariffForm({ ...tariffForm, note: e.target.value })} />
         </div>
       </Modal>
 
       {/* Delete tariff */}
-      <Modal title="Delete Tariff" show={deleteTariffId !== null}
+      <Modal title={t("services.delete_tariff", lang)} show={deleteTariffId !== null}
         onClose={() => setDeleteTariffId(null)} onConfirm={confirmTariffDelete}
-        confirmLabel="Delete" confirmVariant="danger">
-        Delete this tariff only if it is not used by calculations.
+        confirmLabel={t("common.delete", lang)} confirmVariant="danger">
+        {t("services.delete_tariff_help", lang)}
       </Modal>
     </>
   );

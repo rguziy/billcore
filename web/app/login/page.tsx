@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/api";
 import { saveAuth, defaultPath, setPreferredLanguage } from "@/lib/auth";
-import { useLanguage, setLanguage, t, SUPPORTED_LANGUAGES, type Language } from "@/lib/i18n";
+import { useLanguage, setLanguage, t, SUPPORTED_LANGUAGES, LANGUAGE_FLAGS, type Language } from "@/lib/i18n";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -109,7 +109,7 @@ export default function LoginPage() {
           >
             {SUPPORTED_LANGUAGES.map((l) => (
               <option key={l} value={l}>
-                {t(`language.${l}`, lang)}
+                {LANGUAGE_FLAGS[l]} {t(`language.${l}`, lang)}
               </option>
             ))}
           </select>

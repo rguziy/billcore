@@ -39,7 +39,7 @@ export default function PeriodsPage() {
     try {
       const res: OpenPeriodResponse = await periodsApi.open(openDate);
       setShowOpen(false);
-      setSuccess(`Period opened. ${res.generated} calculation(s) generated.`);
+      setSuccess(t("periods.open_success", lang).replace("{count}", String(res.generated)));
       load();
     } catch (e: any) { setError(e.message); }
   };
@@ -91,22 +91,22 @@ export default function PeriodsPage() {
 
       <div className="bc-card p-0">
         {loading ? (
-          <div className="p-4 text-center text-muted">Loading...</div>
+          <div className="p-4 text-center text-muted">{t("common.loading", lang)}</div>
         ) : (
           <table className="table bc-table mb-0">
             <thead>
               <tr>
-                <th className="ps-3">Period</th>
-                <th>Start</th>
-                <th>End</th>
-                <th>Status</th>
-                <th>Created</th>
+                <th className="ps-3">{t("periods.period", lang)}</th>
+                <th>{t("periods.start", lang)}</th>
+                <th>{t("periods.end", lang)}</th>
+                <th>{t("common.status", lang)}</th>
+                <th>{t("common.created", lang)}</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {periods.length === 0 && (
-                <tr><td colSpan={6} className="text-center text-muted p-4">No periods yet</td></tr>
+                <tr><td colSpan={6} className="text-center text-muted p-4">{t("periods.no_periods", lang)}</td></tr>
               )}
               {periods.map((p) => (
                 <tr key={p.id}>
@@ -119,27 +119,27 @@ export default function PeriodsPage() {
                   <td>{fmt(p.period_end)}</td>
                   <td>
                     {p.status === "open"
-                      ? <span className="badge badge-paid"><i className="bi bi-unlock me-1" />Open</span>
-                      : <span className="badge badge-cancelled"><i className="bi bi-lock me-1" />Closed</span>}
+                      ? <span className="badge badge-paid"><i className="bi bi-unlock me-1" />{t("common.open", lang)}</span>
+                      : <span className="badge badge-cancelled"><i className="bi bi-lock me-1" />{t("common.closed", lang)}</span>}
                   </td>
                   <td>{new Date(p.created_at).toLocaleDateString()}</td>
                   <td className="text-end pe-3">
                     <Link href={`/calculations?period_id=${p.id}`}
-                      className="btn btn-sm btn-outline-primary me-1" title="View calculations">
+                      className="btn btn-sm btn-outline-primary me-1" title={t("common.view_calculations", lang)}>
                       <i className="bi bi-table" />
                     </Link>
                     {p.status === "open" ? (
-                      <button className="btn btn-sm btn-outline-warning me-1" title="Close period"
+                      <button className="btn btn-sm btn-outline-warning me-1" title={t("periods.close", lang)}
                         onClick={() => setCloseId(p.id)}>
                         <i className="bi bi-lock" />
                       </button>
                     ) : (
-                      <button className="btn btn-sm btn-outline-secondary me-1" title="Reopen period"
+                      <button className="btn btn-sm btn-outline-secondary me-1" title={t("periods.reopen", lang)}
                         onClick={() => reopenPeriod(p.id)}>
                         <i className="bi bi-unlock" />
                       </button>
                     )}
-                    <button className="btn btn-sm btn-outline-danger" title="Delete"
+                    <button className="btn btn-sm btn-outline-danger" title={t("common.delete", lang)}
                       onClick={() => setDeleteId(p.id)}>
                       <i className="bi bi-trash" />
                     </button>
@@ -152,30 +152,29 @@ export default function PeriodsPage() {
       </div>
 
       {/* Open period modal */}
-      <Modal title="Open Billing Period" show={showOpen} onClose={() => setShowOpen(false)}
-        onConfirm={openPeriod} confirmLabel="Open & Generate">
+      <Modal title={t("periods.open_title", lang)} show={showOpen} onClose={() => setShowOpen(false)}
+        onConfirm={openPeriod} confirmLabel={t("periods.open_confirm", lang)}>
         <p className="text-muted" style={{ fontSize: "0.875rem" }}>
-          Opening a period will automatically create calculations for all active subscriptions.
-          Meter readings will need to be entered manually.
+          {t("periods.open_help", lang)}
         </p>
         <div className="mb-3">
-          <label className="form-label">Period start (1st of month) *</label>
+          <label className="form-label">{t("periods.start_first", lang)} *</label>
           <input className="form-control" type="date" value={openDate}
             onChange={(e) => setOpenDate(e.target.value)} />
         </div>
       </Modal>
 
       {/* Close confirm */}
-      <Modal title="Close Period" show={closeId !== null} onClose={() => setCloseId(null)}
-        onConfirm={closePeriod} confirmLabel="Close Period" confirmVariant="warning">
-        <p>Closing this period will <strong>lock all calculations</strong> and prevent further edits.</p>
-        <p className="text-muted mb-0" style={{ fontSize: "0.875rem" }}>You can reopen it later if needed.</p>
+      <Modal title={t("periods.close_title", lang)} show={closeId !== null} onClose={() => setCloseId(null)}
+        onConfirm={closePeriod} confirmLabel={t("periods.close_confirm", lang)} confirmVariant="warning">
+        <p>{t("periods.close_help", lang)}</p>
+        <p className="text-muted mb-0" style={{ fontSize: "0.875rem" }}>{t("periods.reopen_help", lang)}</p>
       </Modal>
 
       {/* Delete confirm */}
-      <Modal title="Delete Period" show={deleteId !== null} onClose={() => setDeleteId(null)}
-        onConfirm={deletePeriod} confirmLabel="Delete" confirmVariant="danger">
-        This will delete the period and all its calculations. This action cannot be undone.
+      <Modal title={t("periods.delete_title", lang)} show={deleteId !== null} onClose={() => setDeleteId(null)}
+        onConfirm={deletePeriod} confirmLabel={t("common.delete", lang)} confirmVariant="danger">
+        {t("periods.delete_help", lang)}
       </Modal>
     </>
   );

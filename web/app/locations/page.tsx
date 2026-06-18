@@ -7,8 +7,11 @@ import type { Location, Client } from "@/types";
 import Modal from "@/app/_components/Modal";
 import Alert from "@/app/_components/Alert";
 import Link from "next/link";
+import { useLang } from "@/app/_components/LangProvider";
+import { t } from "@/lib/i18n";
 
 function LocationsContent() {
+  const { lang } = useLang();
   const searchParams = useSearchParams();
   const router       = useRouter();
 
@@ -90,12 +93,12 @@ function LocationsContent() {
   return (
     <>
       <div className="bc-page-header">
-        <h1>Locations</h1>
+        <h1>{t("locations.title", lang)}</h1>
         <button className="btn btn-primary btn-sm"
           disabled={!clientId}
-          title={!clientId ? "Select a client first" : ""}
+          title={!clientId ? t("locations.select_first", lang) : ""}
           onClick={() => { setCreateForm({ name: "", address: "", is_default: false }); setShowCreate(true); }}>
-          <i className="bi bi-plus-lg me-1" /> Add Location
+          <i className="bi bi-plus-lg me-1" /> {t("locations.new", lang)}
         </button>
       </div>
 
@@ -105,10 +108,10 @@ function LocationsContent() {
       <div className="bc-card">
         <div className="row g-2 align-items-end">
           <div className="col-md-5">
-            <label className="form-label">Client *</label>
+            <label className="form-label">{t("locations.client_required", lang)} *</label>
             <select className="form-select" value={clientId}
               onChange={(e) => setClient(e.target.value)}>
-              <option value="">— select client —</option>
+              <option value="">— {t("common.select_client", lang)} —</option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.full_name} ({c.account_number})
@@ -119,10 +122,10 @@ function LocationsContent() {
           {selectedClient && (
             <div className="col-md-auto d-flex gap-2 pb-1">
               <Link href={`/clients/detail?id=${selectedClient.id}`} className="btn btn-sm btn-outline-secondary">
-                <i className="bi bi-person me-1" />Client profile
+                <i className="bi bi-person me-1" />{t("locations.client_profile", lang)}
               </Link>
               <Link href={`/subscriptions?client_id=${selectedClient.id}`} className="btn btn-sm btn-outline-secondary">
-                <i className="bi bi-link-45deg me-1" />Subscriptions
+                <i className="bi bi-link-45deg me-1" />{t("subscriptions.title", lang)}
               </Link>
             </div>
           )}
@@ -133,20 +136,20 @@ function LocationsContent() {
       {!clientId ? (
         <div className="bc-card text-center text-muted py-4">
           <i className="bi bi-geo-alt" style={{ fontSize: "2rem", opacity: 0.3 }} />
-          <div className="mt-2">Select a client to view their locations</div>
+          <div className="mt-2">{t("locations.select_to_view", lang)}</div>
         </div>
       ) : (
         <div className="bc-card p-0">
           {loading ? (
-            <div className="p-4 text-center text-muted">Loading...</div>
+            <div className="p-4 text-center text-muted">{t("common.loading", lang)}</div>
           ) : (
             <table className="table bc-table mb-0">
               <thead>
                 <tr>
-                  <th className="ps-3">Name</th>
-                  <th>Address</th>
-                  <th>Default</th>
-                  <th>Created</th>
+                  <th className="ps-3">{t("locations.name", lang)}</th>
+                  <th>{t("locations.address", lang)}</th>
+                  <th>{t("locations.is_default", lang)}</th>
+                  <th>{t("common.created", lang)}</th>
                   <th></th>
                 </tr>
               </thead>
@@ -154,9 +157,9 @@ function LocationsContent() {
                 {locations.length === 0 && (
                   <tr>
                     <td colSpan={5} className="text-center text-muted p-4">
-                      No locations yet.
+                      {t("locations.no_locations", lang)}.
                       <button className="btn btn-sm btn-link p-0 ms-1"
-                        onClick={() => setShowCreate(true)}>Add one</button>
+                        onClick={() => setShowCreate(true)}>{t("locations.add_one", lang)}</button>
                     </td>
                   </tr>
                 )}
@@ -166,13 +169,13 @@ function LocationsContent() {
                     <td>{l.address || "—"}</td>
                     <td>
                       {l.is_default
-                        ? <span className="badge badge-paid">Default</span>
+                        ? <span className="badge badge-paid">{t("locations.is_default", lang)}</span>
                         : <span className="text-muted">—</span>}
                     </td>
                     <td style={{ fontSize: "0.85rem" }}>{new Date(l.created_at).toLocaleDateString()}</td>
                     <td className="text-end pe-3">
                       <Link href={`/subscriptions?client_id=${clientId}`}
-                        className="btn btn-sm btn-outline-secondary me-1" title="Subscriptions">
+                        className="btn btn-sm btn-outline-secondary me-1" title={t("subscriptions.title", lang)}>
                         <i className="bi bi-link-45deg" />
                       </Link>
                       <button className="btn btn-sm btn-outline-secondary me-1"
@@ -193,16 +196,16 @@ function LocationsContent() {
       )}
 
       {/* Create modal */}
-      <Modal title={`Add Location${selectedClient ? ` — ${selectedClient.full_name}` : ""}`}
+      <Modal title={`${t("locations.new", lang)}${selectedClient ? ` — ${selectedClient.full_name}` : ""}`}
         show={showCreate} onClose={() => setShowCreate(false)} onConfirm={create}>
         <div className="mb-3">
-          <label className="form-label">Name *</label>
-          <input className="form-control" placeholder="e.g. Apartment, Cottage, Office"
+          <label className="form-label">{t("locations.name", lang)} *</label>
+          <input className="form-control" placeholder={t("locations.placeholder", lang)}
             value={createForm.name}
             onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} />
         </div>
         <div className="mb-3">
-          <label className="form-label">Address</label>
+          <label className="form-label">{t("locations.address", lang)}</label>
           <input className="form-control" value={createForm.address}
             onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })} />
         </div>
@@ -210,20 +213,20 @@ function LocationsContent() {
           <input className="form-check-input" type="checkbox" id="createDefault"
             checked={createForm.is_default}
             onChange={(e) => setCreateForm({ ...createForm, is_default: e.target.checked })} />
-          <label className="form-check-label" htmlFor="createDefault">Set as default</label>
+          <label className="form-check-label" htmlFor="createDefault">{t("locations.set_default", lang)}</label>
         </div>
       </Modal>
 
       {/* Edit modal */}
-      <Modal title="Edit Location" show={editLoc !== null}
+      <Modal title={t("locations.edit", lang)} show={editLoc !== null}
         onClose={() => setEditLoc(null)} onConfirm={update}>
         <div className="mb-3">
-          <label className="form-label">Name *</label>
+          <label className="form-label">{t("locations.name", lang)} *</label>
           <input className="form-control" value={editForm.name}
             onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
         </div>
         <div className="mb-3">
-          <label className="form-label">Address</label>
+          <label className="form-label">{t("locations.address", lang)}</label>
           <input className="form-control" value={editForm.address}
             onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} />
         </div>
@@ -231,15 +234,15 @@ function LocationsContent() {
           <input className="form-check-input" type="checkbox" id="editDefault"
             checked={editForm.is_default}
             onChange={(e) => setEditForm({ ...editForm, is_default: e.target.checked })} />
-          <label className="form-check-label" htmlFor="editDefault">Set as default</label>
+          <label className="form-check-label" htmlFor="editDefault">{t("locations.set_default", lang)}</label>
         </div>
       </Modal>
 
       {/* Delete confirm */}
-      <Modal title="Delete Location" show={deleteId !== null}
+      <Modal title={t("locations.delete", lang)} show={deleteId !== null}
         onClose={() => setDeleteId(null)} onConfirm={confirmDelete}
-        confirmLabel="Delete" confirmVariant="danger">
-        Delete this location? All associated subscriptions will be affected.
+        confirmLabel={t("common.delete", lang)} confirmVariant="danger">
+        {t("locations.delete_help", lang)}
       </Modal>
     </>
   );
@@ -247,7 +250,7 @@ function LocationsContent() {
 
 export default function LocationsPage() {
   return (
-    <Suspense fallback={<div className="p-4 text-center text-muted">Loading...</div>}>
+    <Suspense fallback={<div className="p-4 text-center text-muted">{t("common.loading", "en")}</div>}>
       <LocationsContent />
     </Suspense>
   );

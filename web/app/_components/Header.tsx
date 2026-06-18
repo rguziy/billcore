@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { getUser, clearAuth } from "@/lib/auth";
 import { authApi } from "@/lib/api";
 import { useLang } from "./LangProvider";
-import { t, SUPPORTED_LANGUAGES } from "@/lib/i18n";
+import { t, SUPPORTED_LANGUAGES, LANGUAGE_FLAGS } from "@/lib/i18n";
 import type { AuthUser } from "@/lib/auth";
 
 export default function Header() {
@@ -69,7 +69,7 @@ export default function Header() {
         >
           {SUPPORTED_LANGUAGES.map((l) => (
             <option key={l} value={l}>
-              {t(`language.${l}`, lang)}
+              {LANGUAGE_FLAGS[l]} {t(`language.${l}`, lang)}
             </option>
           ))}
         </select>

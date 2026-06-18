@@ -8,8 +8,11 @@ import type { Client, Location, ClientBalance, CalculationRow, Subscription, Ser
 import Modal from "@/app/_components/Modal";
 import Alert from "@/app/_components/Alert";
 import Link from "next/link";
+import { useLang } from "@/app/_components/LangProvider";
+import { t } from "@/lib/i18n";
 
 function ClientDetailContent() {
+  const { lang } = useLang();
   const searchParams = useSearchParams();
   const id = searchParams.get("id") ?? "";
   const clientId = Number(id);
@@ -112,14 +115,14 @@ function ClientDetailContent() {
     } catch (e: any) { setError(e.message); }
   };
 
-  if (!client) return <div className="text-center p-5 text-muted">Loading...</div>;
+  if (!client) return <div className="text-center p-5 text-muted">{t("common.loading", lang)}</div>;
 
   return (
     <>
       <div className="bc-page-header">
         <div>
           <div style={{ fontSize: "0.8rem", color: "#64748b" }}>
-            <Link href="/clients" className="text-decoration-none">Clients</Link> / {client.full_name}
+            <Link href="/clients" className="text-decoration-none">{t("clients.title", lang)}</Link> / {client.full_name}
           </div>
           <h1>{client.full_name}</h1>
         </div>
@@ -131,13 +134,13 @@ function ClientDetailContent() {
         {/* Info */}
         <div className="col-md-4">
           <div className="bc-card">
-            <h6 className="text-muted mb-3" style={{ fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Info</h6>
-            <div className="mb-2"><span className="text-muted me-2">Account:</span><code>{client.account_number}</code></div>
-            <div className="mb-2"><span className="text-muted me-2">Phone:</span>{client.phone || "—"}</div>
-            <div className="mb-2"><span className="text-muted me-2">Email:</span>{client.email || "—"}</div>
-            <div><span className="text-muted me-2">Status:</span>
+            <h6 className="text-muted mb-3" style={{ fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>{t("client_detail.info", lang)}</h6>
+            <div className="mb-2"><span className="text-muted me-2">{t("client_detail.account", lang)}:</span><code>{client.account_number}</code></div>
+            <div className="mb-2"><span className="text-muted me-2">{t("clients.phone", lang)}:</span>{client.phone || "—"}</div>
+            <div className="mb-2"><span className="text-muted me-2">{t("clients.email", lang)}:</span>{client.email || "—"}</div>
+            <div><span className="text-muted me-2">{t("common.status", lang)}:</span>
               <span className={`badge ${client.is_active ? "badge-paid" : "badge-cancelled"}`}>
-                {client.is_active ? "Active" : "Inactive"}
+                {client.is_active ? t("common.active", lang) : t("common.inactive", lang)}
               </span>
             </div>
           </div>
@@ -147,15 +150,15 @@ function ClientDetailContent() {
         {balance && (
           <div className="col-md-8">
             <div className="bc-card">
-              <h6 className="text-muted mb-3" style={{ fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Balance</h6>
+              <h6 className="text-muted mb-3" style={{ fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>{t("client_detail.balance", lang)}</h6>
               <div className="row text-center">
                 <div className="col-6">
                   <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#dc2626" }}>{balance.debt.toFixed(2)}</div>
-                  <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Pending</div>
+                  <div style={{ fontSize: "0.75rem", color: "#64748b" }}>{t("calculations.pending", lang)}</div>
                 </div>
                 <div className="col-6">
                   <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#059669" }}>{balance.paid_total.toFixed(2)}</div>
-                  <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Paid</div>
+                  <div style={{ fontSize: "0.75rem", color: "#64748b" }}>{t("calculations.paid", lang)}</div>
                 </div>
               </div>
             </div>
@@ -166,13 +169,13 @@ function ClientDetailContent() {
       {/* Locations */}
       <div className="bc-card">
         <div className="d-flex justify-content-between align-items-center mb-3">
-          <h6 className="mb-0" style={{ fontWeight: 600 }}>Locations</h6>
+          <h6 className="mb-0" style={{ fontWeight: 600 }}>{t("locations.title", lang)}</h6>
           <button className="btn btn-sm btn-outline-primary" onClick={openAddLocation}>
-            <i className="bi bi-plus-lg me-1" /> Add
+            <i className="bi bi-plus-lg me-1" /> {t("common.add", lang)}
           </button>
         </div>
         {locations.length === 0 ? (
-          <div className="text-muted text-center py-3">No locations</div>
+          <div className="text-muted text-center py-3">{t("locations.no_locations", lang)}</div>
         ) : (
           <div className="row g-2">
             {locations.map((l) => (
@@ -183,12 +186,12 @@ function ClientDetailContent() {
                       <div className="fw-semibold">{l.name}</div>
                       <div style={{ fontSize: "0.8rem", color: "#64748b" }}>{l.address || "—"}</div>
                     </div>
-                    <button className="btn btn-sm btn-outline-secondary" title="Edit"
+                    <button className="btn btn-sm btn-outline-secondary" title={t("common.edit", lang)}
                       onClick={() => openEditLocation(l)}>
                       <i className="bi bi-pencil" />
                     </button>
                   </div>
-                  {l.is_default && <span className="badge badge-paid mt-1">Default</span>}
+                  {l.is_default && <span className="badge badge-paid mt-1">{t("locations.is_default", lang)}</span>}
                 </div>
               </div>
             ))}
@@ -199,21 +202,21 @@ function ClientDetailContent() {
       {/* Subscriptions */}
       <div className="bc-card">
         <div className="d-flex justify-content-between align-items-center mb-3">
-          <h6 className="mb-0" style={{ fontWeight: 600 }}>Subscriptions</h6>
+          <h6 className="mb-0" style={{ fontWeight: 600 }}>{t("subscriptions.title", lang)}</h6>
         </div>
         {locations.length === 0 ? (
-          <div className="text-muted text-center py-2" style={{ fontSize: "0.875rem" }}>Add a location first</div>
+          <div className="text-muted text-center py-2" style={{ fontSize: "0.875rem" }}>{t("client_detail.add_location_first", lang)}</div>
         ) : subscriptions.length === 0 ? (
-          <div className="text-muted text-center py-2" style={{ fontSize: "0.875rem" }}>No subscriptions yet</div>
+          <div className="text-muted text-center py-2" style={{ fontSize: "0.875rem" }}>{t("subscriptions.no_subscriptions", lang)}</div>
         ) : (
           <table className="table bc-table mb-0">
             <thead>
               <tr>
-                <th>Location</th>
-                <th>Service</th>
-                <th>Meter #</th>
-                <th>Connected</th>
-                <th>Status</th>
+                <th>{t("locations.title", lang)}</th>
+                <th>{t("subscriptions.service", lang)}</th>
+                <th>{t("subscriptions.meter_number", lang)}</th>
+                <th>{t("subscriptions.connected_at", lang)}</th>
+                <th>{t("common.status", lang)}</th>
                 <th></th>
               </tr>
             </thead>
@@ -226,17 +229,17 @@ function ClientDetailContent() {
                   <td>{new Date(s.connected_at).toLocaleDateString()}</td>
                   <td>
                     {s.disconnected_at
-                      ? <span className="badge badge-cancelled">Disconnected</span>
-                      : <span className="badge badge-paid">Active</span>}
+                      ? <span className="badge badge-cancelled">{t("subscriptions.disconnected", lang)}</span>
+                      : <span className="badge badge-paid">{t("subscriptions.active", lang)}</span>}
                   </td>
                   <td className="text-end">
                     {!s.disconnected_at && (
-                      <button className="btn btn-sm btn-outline-warning me-1" title="Disconnect"
+                      <button className="btn btn-sm btn-outline-warning me-1" title={t("subscriptions.disconnect", lang)}
                         onClick={() => { setDisconnectId(s.id); setDisconnectDate(new Date().toISOString().split("T")[0]); }}>
                         <i className="bi bi-slash-circle" />
                       </button>
                     )}
-                    <button className="btn btn-sm btn-outline-danger" title="Delete"
+                    <button className="btn btn-sm btn-outline-danger" title={t("common.delete", lang)}
                       onClick={() => setDeleteSubId(s.id)}>
                       <i className="bi bi-trash" />
                     </button>
@@ -248,7 +251,7 @@ function ClientDetailContent() {
         )}
         {locations.length > 0 && (
           <div className="mt-3">
-            <label className="form-label mb-1" style={{ fontSize: "0.8rem", color: "#64748b" }}>Add subscription to location:</label>
+            <label className="form-label mb-1" style={{ fontSize: "0.8rem", color: "#64748b" }}>{t("client_detail.add_subscription_to", lang)}</label>
             <div className="d-flex gap-2 flex-wrap">
               {locations.map((l) => (
                 <button key={l.id} className="btn btn-sm btn-outline-primary"
@@ -264,27 +267,27 @@ function ClientDetailContent() {
       {/* Pending calculations */}
       <div className="bc-card">
         <div className="d-flex justify-content-between align-items-center mb-3">
-          <h6 className="mb-0" style={{ fontWeight: 600 }}>Pending calculations</h6>
+          <h6 className="mb-0" style={{ fontWeight: 600 }}>{t("client_detail.pending_calculations", lang)}</h6>
           <Link href={`/calculations?client_id=${clientId}`} className="btn btn-sm btn-outline-primary">
-            <i className="bi bi-calculator me-1" /> Manage
+            <i className="bi bi-calculator me-1" /> {t("client_detail.manage", lang)}
           </Link>
         </div>
         <table className="table bc-table mb-0">
           <thead>
             <tr>
-              <th>Service</th>
-              <th>Location</th>
-              <th>Period</th>
-              <th>Prev</th>
-              <th>Curr</th>
-              <th>Amount</th>
-              <th>Note</th>
-              <th>Status</th>
+              <th>{t("calculations.service", lang)}</th>
+              <th>{t("calculations.location", lang)}</th>
+              <th>{t("calculations.period", lang)}</th>
+              <th>{t("calculations.prev", lang)}</th>
+              <th>{t("calculations.curr", lang)}</th>
+              <th>{t("calculations.amount", lang)}</th>
+              <th>{t("calculations.note", lang)}</th>
+              <th>{t("common.status", lang)}</th>
             </tr>
           </thead>
           <tbody>
             {pending.length === 0 && (
-              <tr><td colSpan={8} className="text-center text-muted p-3">No pending calculations</td></tr>
+              <tr><td colSpan={8} className="text-center text-muted p-3">{t("client_detail.no_pending", lang)}</td></tr>
             )}
             {pending.map((c) => (
               <tr key={c.id}>
@@ -303,7 +306,7 @@ function ClientDetailContent() {
                 <td>{c.reading_curr != null ? c.reading_curr : c.has_meter ? <span className="text-warning">—</span> : "—"}</td>
                 <td><strong>{c.amount.toFixed(2)}</strong></td>
                 <td>{c.note || "—"}</td>
-                <td><span className={`badge badge-${c.status}`}>{c.status}</span></td>
+                <td><span className={`badge badge-${c.status}`}>{t(`calculations.${c.status}`, lang)}</span></td>
               </tr>
             ))}
           </tbody>
@@ -312,20 +315,20 @@ function ClientDetailContent() {
 
       {/* Paid calculations history */}
       <div className="bc-card">
-        <h6 className="mb-3" style={{ fontWeight: 600 }}>Payment history</h6>
+        <h6 className="mb-3" style={{ fontWeight: 600 }}>{t("client_detail.payment_history", lang)}</h6>
         <table className="table bc-table mb-0">
           <thead>
             <tr>
-              <th>Service</th>
-              <th>Location</th>
-              <th>Period</th>
-              <th>Amount</th>
-              <th>Note</th>
+              <th>{t("calculations.service", lang)}</th>
+              <th>{t("calculations.location", lang)}</th>
+              <th>{t("calculations.period", lang)}</th>
+              <th>{t("calculations.amount", lang)}</th>
+              <th>{t("calculations.note", lang)}</th>
             </tr>
           </thead>
           <tbody>
             {paid.length === 0 && (
-              <tr><td colSpan={5} className="text-center text-muted p-3">No paid calculations</td></tr>
+              <tr><td colSpan={5} className="text-center text-muted p-3">{t("client_detail.no_paid", lang)}</td></tr>
             )}
             {paid.map((c) => (
               <tr key={c.id}>
@@ -349,72 +352,72 @@ function ClientDetailContent() {
       </div>
 
       {/* Subscription create modal */}
-      <Modal title="New Subscription" show={showSubModal} onClose={() => setShowSubModal(false)} onConfirm={saveSubscription}>
+      <Modal title={t("subscriptions.new", lang)} show={showSubModal} onClose={() => setShowSubModal(false)} onConfirm={saveSubscription}>
         <div className="mb-3">
-          <label className="form-label">Service *</label>
+          <label className="form-label">{t("subscriptions.service", lang)} *</label>
           <select className="form-select" value={subForm.service_id || ""}
             onChange={(e) => setSubForm({ ...subForm, service_id: Number(e.target.value) })}>
-            <option value="">— select service —</option>
+            <option value="">— {t("common.select_service", lang)} —</option>
             {services.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.unit})</option>)}
           </select>
         </div>
         <div className="mb-3">
-          <label className="form-label">Meter number</label>
+          <label className="form-label">{t("subscriptions.meter_number", lang)}</label>
           <input className="form-control" placeholder="e.g. 5248511" value={subForm.meter_number}
             onChange={(e) => setSubForm({ ...subForm, meter_number: e.target.value })} />
         </div>
         <div className="mb-3">
-          <label className="form-label">Connected at *</label>
+          <label className="form-label">{t("subscriptions.connected_at", lang)} *</label>
           <input className="form-control" type="date" value={subForm.connected_at}
             onChange={(e) => setSubForm({ ...subForm, connected_at: e.target.value })} />
         </div>
         <div className="mb-3">
-          <label className="form-label">Note</label>
+          <label className="form-label">{t("calculations.note", lang)}</label>
           <input className="form-control" value={subForm.note}
             onChange={(e) => setSubForm({ ...subForm, note: e.target.value })} />
         </div>
       </Modal>
 
       {/* Disconnect modal */}
-      <Modal title="Disconnect subscription" show={disconnectId !== null}
+      <Modal title={t("subscriptions.disconnect_title", lang)} show={disconnectId !== null}
         onClose={() => setDisconnectId(null)} onConfirm={disconnect}
-        confirmLabel="Disconnect" confirmVariant="warning">
+        confirmLabel={t("subscriptions.disconnect", lang)} confirmVariant="warning">
         <div className="mb-3">
-          <label className="form-label">Disconnection date</label>
+          <label className="form-label">{t("subscriptions.disconnection_date", lang)}</label>
           <input className="form-control" type="date" value={disconnectDate}
             onChange={(e) => setDisconnectDate(e.target.value)} />
         </div>
       </Modal>
 
       {/* Delete subscription modal */}
-      <Modal title="Delete subscription" show={deleteSubId !== null}
+      <Modal title={t("subscriptions.delete", lang)} show={deleteSubId !== null}
         onClose={() => setDeleteSubId(null)} onConfirm={deleteSub}
-        confirmLabel="Delete" confirmVariant="danger">
-        Are you sure you want to delete this subscription?
+        confirmLabel={t("common.delete", lang)} confirmVariant="danger">
+        {t("subscriptions.delete_question", lang)}
       </Modal>
 
       {/* Location modal */}
       <Modal
-        title={editingLocation ? "Edit Location" : "Add Location"}
+        title={editingLocation ? t("locations.edit", lang) : t("locations.new", lang)}
         show={showLocModal}
         onClose={() => { setShowLocModal(false); setEditingLocation(null); }}
         onConfirm={saveLocation}
-        confirmLabel={editingLocation ? "Save" : "Create"}
+        confirmLabel={editingLocation ? t("common.save", lang) : t("common.create", lang)}
       >
         <div className="mb-3">
-          <label className="form-label">Name *</label>
-          <input className="form-control" placeholder="e.g. Apartment, Cottage" value={locForm.name}
+          <label className="form-label">{t("locations.name", lang)} *</label>
+          <input className="form-control" placeholder={t("locations.placeholder", lang)} value={locForm.name}
             onChange={(e) => setLocForm({ ...locForm, name: e.target.value })} />
         </div>
         <div className="mb-3">
-          <label className="form-label">Address</label>
+          <label className="form-label">{t("locations.address", lang)}</label>
           <input className="form-control" value={locForm.address}
             onChange={(e) => setLocForm({ ...locForm, address: e.target.value })} />
         </div>
         <div className="form-check">
           <input className="form-check-input" type="checkbox" id="isDefault" checked={locForm.is_default}
             onChange={(e) => setLocForm({ ...locForm, is_default: e.target.checked })} />
-          <label className="form-check-label" htmlFor="isDefault">Set as default</label>
+          <label className="form-check-label" htmlFor="isDefault">{t("locations.set_default", lang)}</label>
         </div>
       </Modal>
 
@@ -425,7 +428,7 @@ function ClientDetailContent() {
 
 export default function ClientDetailPage() {
   return (
-    <Suspense fallback={<div className="p-4 text-center text-muted">Loading...</div>}>
+    <Suspense fallback={<div className="p-4 text-center text-muted">{t("common.loading", "en")}</div>}>
       <ClientDetailContent />
     </Suspense>
   );

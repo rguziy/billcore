@@ -5,6 +5,8 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { periodsApi, calculationsApi, clientsApi, subscriptionsApi, servicesApi } from "@/lib/api";
 import type { CalculationRow, Period, Client, Location, CalculationStatus } from "@/types";import Alert from "@/app/_components/Alert";
 import Modal from "@/app/_components/Modal";
+import { useLang } from "@/app/_components/LangProvider";
+import { t } from "@/lib/i18n";
 
 const statusColor: Record<CalculationStatus, string> = {
   pending:   "badge-pending",
@@ -13,6 +15,7 @@ const statusColor: Record<CalculationStatus, string> = {
 };
 
 function CalculationsContent() {
+  const { lang } = useLang();
   const searchParams = useSearchParams();
   const router       = useRouter();
 
@@ -219,17 +222,17 @@ function CalculationsContent() {
   return (
     <>
       <div className="bc-page-header">
-        <h1>Calculations</h1>
+        <h1>{t("calculations.title", lang)}</h1>
         <div className="d-flex align-items-center gap-2">
           {currentPeriod && (
             <span className={`badge fs-6 ${currentPeriod.status === "open" ? "badge-paid" : "badge-cancelled"}`}>
               <i className={`bi bi-${currentPeriod.status === "open" ? "unlock" : "lock"} me-1`} />
-              {currentPeriod.status === "open" ? "Open" : "Closed"}
+              {currentPeriod.status === "open" ? t("common.open", lang) : t("common.closed", lang)}
             </span>
           )}
           {!isLocked && periodId && (
             <button className="btn btn-primary btn-sm" onClick={openCreate}>
-              <i className="bi bi-plus-lg me-1" /> Add Calculation
+              <i className="bi bi-plus-lg me-1" /> {t("calculations.new", lang)}
             </button>
           )}
         </div>
@@ -241,10 +244,10 @@ function CalculationsContent() {
       <div className="bc-card">
         <div className="row g-2 align-items-end">
           <div className="col-md-4">
-            <label className="form-label">Period *</label>
+            <label className="form-label">{t("calculations.period", lang)} *</label>
             <select className="form-select" value={periodId}
               onChange={(e) => setParam("period_id", e.target.value)}>
-              <option value="">— select period —</option>
+              <option value="">— {t("common.select_period", lang)} —</option>
               {periods.map((p) => (
                 <option key={p.id} value={p.id}>
                   {new Date(p.period_start).toLocaleDateString("en-US", { year: "numeric", month: "long" })}
@@ -254,10 +257,10 @@ function CalculationsContent() {
             </select>
           </div>
           <div className="col-md-3">
-            <label className="form-label">Client</label>
+            <label className="form-label">{t("calculations.client", lang)}</label>
             <select className="form-select" value={clientId}
               onChange={(e) => setParam("client_id", e.target.value)}>
-              <option value="">— all clients —</option>
+              <option value="">— {t("subscriptions.all_clients", lang)} —</option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>{c.full_name} ({c.account_number})</option>
               ))}
@@ -265,10 +268,10 @@ function CalculationsContent() {
           </div>
           {clientId && locations.length > 0 && (
             <div className="col-md-3">
-              <label className="form-label">Location</label>
+              <label className="form-label">{t("calculations.location", lang)}</label>
               <select className="form-select" value={locationId}
                 onChange={(e) => setParam("location_id", e.target.value)}>
-                <option value="">— all locations —</option>
+                <option value="">— {t("subscriptions.all_locations", lang)} —</option>
                 {locations.map((l) => (
                   <option key={l.id} value={l.id}>{l.name}{l.address ? ` (${l.address})` : ""}</option>
                 ))}
@@ -279,24 +282,24 @@ function CalculationsContent() {
             <div className="col-12 mt-2">
               <div className="d-flex gap-4">
                 <div>
-                  <span className="text-muted me-1" style={{ fontSize: "0.8rem" }}>Total accrued:</span>
+                  <span className="text-muted me-1" style={{ fontSize: "0.8rem" }}>{t("calculations.total_accrued", lang)}:</span>
                   <strong>{calcs.reduce((s, c) => s + c.amount, 0).toFixed(2)}</strong>
                 </div>
                 <div>
-                  <span className="text-muted me-1" style={{ fontSize: "0.8rem" }}>Paid:</span>
+                  <span className="text-muted me-1" style={{ fontSize: "0.8rem" }}>{t("calculations.paid", lang)}:</span>
                   <strong style={{ color: "#059669" }}>
                     {calcs.filter((c) => c.status === "paid").reduce((s, c) => s + c.amount, 0).toFixed(2)}
                   </strong>
                 </div>
                 <div>
-                  <span className="text-muted me-1" style={{ fontSize: "0.8rem" }}>Pending:</span>
+                  <span className="text-muted me-1" style={{ fontSize: "0.8rem" }}>{t("calculations.pending", lang)}:</span>
                   <strong style={{ color: "#dc2626" }}>
                     {calcs.filter((c) => c.status === "pending").reduce((s, c) => s + c.amount, 0).toFixed(2)}
                   </strong>
                 </div>
                 {needsReading > 0 && (
                   <span className="badge badge-pending align-self-center">
-                    <i className="bi bi-exclamation-triangle me-1" />{needsReading} need reading
+                    <i className="bi bi-exclamation-triangle me-1" />{t("calculations.need_reading", lang).replace("{count}", String(needsReading))}
                   </span>
                 )}
               </div>
@@ -308,25 +311,25 @@ function CalculationsContent() {
       {periodId && (
         <div className="bc-card p-0">
           {loading ? (
-            <div className="p-4 text-center text-muted">Loading...</div>
+            <div className="p-4 text-center text-muted">{t("common.loading", lang)}</div>
           ) : (
             <table className="table bc-table mb-0">
               <thead>
                 <tr>
-                  <th className="ps-3">Service</th>
-                  <th>Location</th>
-                  <th>Prev</th>
-                  <th>Curr</th>
-                  <th>Qty</th>
-                  <th>Amount</th>
-                  <th>Status</th>
-                  <th>Note</th>
+                  <th className="ps-3">{t("calculations.service", lang)}</th>
+                  <th>{t("calculations.location", lang)}</th>
+                  <th>{t("calculations.prev", lang)}</th>
+                  <th>{t("calculations.curr", lang)}</th>
+                  <th>{t("calculations.qty", lang)}</th>
+                  <th>{t("calculations.amount", lang)}</th>
+                  <th>{t("common.status", lang)}</th>
+                  <th>{t("calculations.note", lang)}</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
                 {calcs.length === 0 && (
-                  <tr><td colSpan={9} className="text-center text-muted p-4">No calculations</td></tr>
+                  <tr><td colSpan={9} className="text-center text-muted p-4">{t("calculations.no_calculations", lang)}</td></tr>
                 )}
                 {calcs.map((c) => {
                   const missingReading = c.reading_prev != null && c.reading_curr == null;
@@ -342,29 +345,29 @@ function CalculationsContent() {
                         {c.reading_curr != null
                           ? c.reading_curr
                           : c.reading_prev != null
-                            ? <span className="text-warning fw-semibold">enter ↓</span>
+                            ? <span className="text-warning fw-semibold">{t("calculations.enter", lang)} ↓</span>
                             : <span className="text-muted">—</span>}
                       </td>
                       <td>{c.quantity}</td>
                       <td><strong>{c.amount.toFixed(2)}</strong></td>
-                      <td><span className={`badge ${statusColor[c.status]}`}>{c.status}</span></td>
+                      <td><span className={`badge ${statusColor[c.status]}`}>{t(`calculations.${c.status}`, lang)}</span></td>
                       <td style={{ maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {c.note || <span className="text-muted">—</span>}
                       </td>
                       <td className="text-end pe-3">
                         {!isLocked ? (
                           <div className="d-flex gap-1 justify-content-end">
-                            <button className="btn btn-sm btn-outline-primary" title="Edit"
+                            <button className="btn btn-sm btn-outline-primary" title={t("common.edit", lang)}
                               onClick={() => openEdit(c)}>
                               <i className="bi bi-pencil" />
                             </button>
-                            <button className="btn btn-sm btn-outline-danger" title="Delete"
+                            <button className="btn btn-sm btn-outline-danger" title={t("common.delete", lang)}
                               onClick={() => setDeleteId(c.id)}>
                               <i className="bi bi-trash" />
                             </button>
                           </div>
                         ) : (
-                          <button className="btn btn-sm btn-outline-secondary" title="Mark as paid"
+                          <button className="btn btn-sm btn-outline-secondary" title={t("calculations.paid", lang)}
                             onClick={() => { setStatusId(c.id); setNewStatus("paid"); }}>
                             <i className="bi bi-cash" />
                           </button>
@@ -380,10 +383,10 @@ function CalculationsContent() {
       )}
 
       {/* Create modal */}
-      <Modal title="Add Calculation" show={showCreate} onClose={() => setShowCreate(false)}
-        onConfirm={saveCreate} confirmLabel="Create">
+      <Modal title={t("calculations.new", lang)} show={showCreate} onClose={() => setShowCreate(false)}
+        onConfirm={saveCreate} confirmLabel={t("common.create", lang)}>
         <div className="mb-3">
-          <label className="form-label">Subscription *</label>
+          <label className="form-label">{t("calculations.subscription", lang)} *</label>
           <select className="form-select" value={createForm.subscription_id}
             onChange={(e) => {
               const subId = e.target.value;
@@ -396,14 +399,14 @@ function CalculationsContent() {
                 note: "",
               });
             }}>
-            <option value="">— select subscription —</option>
+            <option value="">— {t("common.select_subscription", lang)} —</option>
             {subscriptions.map((s) => (
               <option key={s.id} value={s.id}>{s.label}</option>
             ))}
           </select>
           {subscriptions.length === 0 && (
             <div className="form-text text-warning">
-              {clientId ? "All subscriptions already have calculations for this period." : "Select a client filter first."}
+              {clientId ? t("calculations.all_exist", lang) : t("calculations.select_client_first", lang)}
             </div>
           )}
         </div>
@@ -412,7 +415,7 @@ function CalculationsContent() {
           return sub?.has_meter ? (
             <>
               <div className="mb-3">
-                <label className="form-label">Previous reading</label>
+                <label className="form-label">{t("calculations.reading_prev", lang)}</label>
                 <input className="form-control" type="number" step="0.001"
                   value={createForm.reading_prev}
                   onChange={(e) => {
@@ -427,13 +430,13 @@ function CalculationsContent() {
                   placeholder="0" />
               </div>
               <div className="mb-3">
-                <label className="form-label">Current reading *</label>
+                <label className="form-label">{t("calculations.reading_curr", lang)} *</label>
                 <input className="form-control" type="number" step="0.001"
                   value={createForm.reading_curr}
                   onChange={(e) => setCreateForm({ ...createForm, reading_curr: e.target.value })} />
                 {createForm.reading_curr !== "" && (
                   <div className="form-text">
-                    Quantity: <strong>
+                    {t("calculations.quantity", lang)}: <strong>
                       {Math.max(0, Number(createForm.reading_curr) - Number(createForm.reading_prev || 0)).toFixed(3)}
                     </strong>
                   </div>
@@ -442,7 +445,7 @@ function CalculationsContent() {
             </>
           ) : sub ? (
             <div className="mb-3">
-              <label className="form-label">Quantity</label>
+              <label className="form-label">{t("calculations.quantity", lang)}</label>
               <input className="form-control" type="number" step="0.01"
                 value={createForm.quantity}
                 onChange={(e) => setCreateForm({ ...createForm, quantity: e.target.value })} />
@@ -450,53 +453,53 @@ function CalculationsContent() {
           ) : null;
         })()}
         <div className="mb-3">
-          <label className="form-label">Note</label>
+          <label className="form-label">{t("calculations.note", lang)}</label>
           <input className="form-control" value={createForm.note}
             onChange={(e) => setCreateForm({ ...createForm, note: e.target.value })} />
         </div>
       </Modal>
 
       {/* Delete confirm */}
-      <Modal title="Delete Calculation" show={deleteId !== null}
+      <Modal title={t("calculations.delete", lang)} show={deleteId !== null}
         onClose={() => setDeleteId(null)} onConfirm={confirmDelete}
-        confirmLabel="Delete" confirmVariant="danger">
-        <p>Are you sure you want to delete this calculation?</p>
+        confirmLabel={t("common.delete", lang)} confirmVariant="danger">
+        <p>{t("calculations.delete_question", lang)}</p>
         <p className="text-muted mb-0" style={{ fontSize: "0.875rem" }}>
-          This is only possible if no payments reference it and the period is open.
+          {t("calculations.delete_help", lang)}
         </p>
       </Modal>
 
       {/* Edit modal */}
-      <Modal title={`Edit — ${editCalc?.service_name ?? ""}`}
+      <Modal title={`${t("calculations.edit", lang)} — ${editCalc?.service_name ?? ""}`}
         show={editCalc !== null} onClose={() => setEditCalc(null)} onConfirm={saveEdit}>
         {editCalc?.has_meter && (
           <>
             <div className="mb-3">
               <label className="form-label">
-                Previous reading
-                {editCalc.reading_prev == null && <span className="text-muted ms-1" style={{fontSize:"0.8rem"}}>(first period — enter manually)</span>}
+                {t("calculations.reading_prev", lang)}
+                {editCalc.reading_prev == null && <span className="text-muted ms-1" style={{fontSize:"0.8rem"}}>({t("calculations.first_period", lang)})</span>}
               </label>
               <input className="form-control" type="number" step="0.001"
                 value={editForm.reading_prev}
                 onChange={(e) => setEditForm({ ...editForm, reading_prev: e.target.value })}
                 disabled={editCalc.reading_prev != null}
-                placeholder={editCalc.reading_prev == null ? "Enter previous reading" : ""}
+                placeholder={editCalc.reading_prev == null ? t("calculations.enter_previous", lang) : ""}
               />
               {editCalc.reading_prev != null && (
-                <div className="form-text">Set automatically from the previous period.</div>
+                <div className="form-text">{t("calculations.previous_auto", lang)}</div>
               )}
             </div>
             <div className="mb-3">
-              <label className="form-label">Current reading *</label>
+              <label className="form-label">{t("calculations.reading_curr", lang)} *</label>
               <input className="form-control" type="number" step="0.001"
                 value={editForm.reading_curr}
                 onChange={(e) => setEditForm({ ...editForm, reading_curr: e.target.value })}
-                placeholder="Enter current meter reading"
+                placeholder={t("calculations.enter_current", lang)}
                 autoFocus={editCalc.reading_prev != null}
               />
               {editForm.reading_curr !== "" && (
                 <div className="form-text">
-                  Quantity: <strong>
+                  {t("calculations.quantity", lang)}: <strong>
                     {Math.max(0, Number(editForm.reading_curr) - Number(editForm.reading_prev || 0)).toFixed(3)}
                   </strong> {editCalc.unit}
                 </div>
@@ -505,16 +508,16 @@ function CalculationsContent() {
           </>
         )}
         <div className="mb-3">
-          <label className="form-label">Status</label>
+          <label className="form-label">{t("common.status", lang)}</label>
           <select className="form-select" value={editForm.status}
             onChange={(e) => setEditForm({ ...editForm, status: e.target.value as CalculationStatus })}>
-            <option value="pending">Pending</option>
-            <option value="paid">Paid</option>
-            <option value="cancelled">Cancelled</option>
+            <option value="pending">{t("calculations.pending", lang)}</option>
+            <option value="paid">{t("calculations.paid", lang)}</option>
+            <option value="cancelled">{t("calculations.cancelled", lang)}</option>
           </select>
         </div>
         <div className="mb-3">
-          <label className="form-label">Note</label>
+          <label className="form-label">{t("calculations.note", lang)}</label>
           <input className="form-control" value={editForm.note}
             onChange={(e) => setEditForm({ ...editForm, note: e.target.value })}
             placeholder="e.g. paid until 2026-09-01" />
@@ -522,15 +525,15 @@ function CalculationsContent() {
       </Modal>
 
       {/* Quick status modal (closed period) */}
-      <Modal title="Update Status" show={statusId !== null}
-        onClose={() => setStatusId(null)} onConfirm={saveStatus} confirmLabel="Update">
+      <Modal title={t("calculations.update_status", lang)} show={statusId !== null}
+        onClose={() => setStatusId(null)} onConfirm={saveStatus} confirmLabel={t("calculations.update", lang)}>
         <div className="mb-3">
-          <label className="form-label">New status</label>
+          <label className="form-label">{t("calculations.new_status", lang)}</label>
           <select className="form-select" value={newStatus}
             onChange={(e) => setNewStatus(e.target.value as CalculationStatus)}>
-            <option value="pending">Pending</option>
-            <option value="paid">Paid</option>
-            <option value="cancelled">Cancelled</option>
+            <option value="pending">{t("calculations.pending", lang)}</option>
+            <option value="paid">{t("calculations.paid", lang)}</option>
+            <option value="cancelled">{t("calculations.cancelled", lang)}</option>
           </select>
         </div>
       </Modal>
@@ -540,7 +543,7 @@ function CalculationsContent() {
 
 export default function CalculationsPage() {
   return (
-    <Suspense fallback={<div className="p-4 text-center text-muted">Loading...</div>}>
+    <Suspense fallback={<div className="p-4 text-center text-muted">{t("common.loading", "en")}</div>}>
       <CalculationsContent />
     </Suspense>
   );
