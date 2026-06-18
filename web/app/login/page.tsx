@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/api";
 import { saveAuth, defaultPath, setPreferredLanguage } from "@/lib/auth";
-import { useLanguage, setLanguage, t, SUPPORTED_LANGUAGES, LANGUAGE_FLAGS, type Language } from "@/lib/i18n";
+import { useLanguage, setLanguage, t, SUPPORTED_LANGUAGES, BRITISH_FLAG, UKRAINIAN_FLAG, type Language } from "@/lib/i18n";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,12 +14,21 @@ export default function LoginPage() {
   const [lang, setLang] = useState<Language>("en");
   const [mounted, setMounted] = useState(false);
 
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
   useEffect(() => {
     setMounted(true);
     const prefLang = (useLanguage() as Language) || "en";
     setLang(prefLang);
     document.documentElement.lang = prefLang;
   }, []);
+
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const closeDropdown = () => setDropdownOpen(false);
+    window.addEventListener("click", closeDropdown);
+    return () => window.removeEventListener("click", closeDropdown);
+  }, [dropdownOpen]);
 
   const submit = async () => {
     if (!form.username || !form.password) {
@@ -46,11 +55,11 @@ export default function LoginPage() {
     if (e.key === "Enter") submit();
   };
 
-  const handleLanguageChange = (newLang: string) => {
-    const language = newLang as Language;
-    setLang(language);
-    setLanguage(language);
-    document.documentElement.lang = language;
+  const handleLanguageChange = (newLang: Language) => {
+    setLang(newLang);
+    setLanguage(newLang);
+    document.documentElement.lang = newLang;
+    setDropdownOpen(false);
   };
 
   if (!mounted) return null;
@@ -100,19 +109,48 @@ export default function LoginPage() {
           />
         </div>
 
-        <div className="mb-4">
+        <div className="mb-4 position-relative">
           <label className="form-label">{t("language.select", lang)}</label>
-          <select
-            className="form-select"
-            value={lang}
-            onChange={(e) => handleLanguageChange(e.target.value)}
-          >
-            {SUPPORTED_LANGUAGES.map((l) => (
-              <option key={l} value={l}>
-                {LANGUAGE_FLAGS[l]} {t(`language.${l}`, lang)}
-              </option>
-            ))}
-          </select>
+
+          <div className="dropdown" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="form-control text-start d-flex align-items-center justify-content-between dropdown-toggle"
+              type="button"
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              style={{ cursor: "pointer" }}
+            >
+              <span className="d-flex align-items-center gap-2">
+                <img
+                  src={lang === "uk" ? UKRAINIAN_FLAG : BRITISH_FLAG}
+                  alt={lang}
+                  style={{ width: "20px", height: "14px", objectFit: "cover", borderRadius: "2px" }}
+                />
+                <span>{t(`language.${lang}`, lang)}</span>
+              </span>
+            </button>
+
+            <ul
+              className={`dropdown-menu w-100 shadow-sm ${dropdownOpen ? "show" : ""}`}
+              style={{ display: dropdownOpen ? "block" : "none", position: "absolute", zIndex: 1000 }}
+            >
+              {SUPPORTED_LANGUAGES.map((l) => (
+                <li key={l}>
+                  <button
+                    className={`dropdown-item d-flex align-items-center gap-2 ${lang === l ? "active" : ""}`}
+                    type="button"
+                    onClick={() => handleLanguageChange(l as Language)}
+                  >
+                    <img
+                      src={l === "uk" ? UKRAINIAN_FLAG : BRITISH_FLAG}
+                      alt={l}
+                      style={{ width: "20px", height: "14px", objectFit: "cover", borderRadius: "2px" }}
+                    />
+                    <span>{t(`language.${l}`, lang)}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         <button

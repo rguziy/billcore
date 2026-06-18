@@ -6,6 +6,9 @@ export const LANGUAGE_FLAGS: Record<Language, string> = {
   en: "🇬🇧",
   uk: "🇺🇦",
 };
+export const UKRAINIAN_FLAG = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2IDQiPjxwYXRoIGZpbGw9IiMwMDU3QjIiIGQ9Ik0wIDBoNnY0SDB6Ii8+PHBhdGggZmlsbD0iI0ZEREUwMCIgZD0iTTAgMmg2djJIMHoiLz48L3N2Zz4=";
+export const BRITISH_FLAG = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2MCAzMCI+PHBhdGggZmlsbD0iIzAxMjE2OSIgZD0iTTAgMGg2MHYzMEgweiIvPjxwYXRoIGZpbGw9IiNGRkZGRkYiIGQ9Ik0wIDBsMjQgMTJ2NkwwIDZ6bTYwIDBMMzYgMTJ2NmwyNC02ek0wIDMwbDI0LTEydjZMMCAyNHptNjAgMEwzNiAxOHY2bDI0IDZ6Ii8+PHBhdGggZmlsbD0iI0MxMDU0NiIgZD0iTTAgMGwyMCAxMHY0TDAgMnpbNjAgMEw0MCAxMHY0bDIwLTEwek0wIDMwbDI0LTEwdi00TDAgMjh6bTYwIDBMNDAgMjB2LTRsMjAgMTB6Ii8+PHBhdGggZmlsbD0iI0ZGRkZGRiIgZD0iTTI0IDBoMTJ2MzBIMjR6bS0yNCAxMmg2MHY2SDB6Ii8+PHBhdGggZmlsbD0iI0MxMDU0NiIgZD0iTTI3IDBoNnYzMGgtNnpbLTI3IDEyaDYwdjZILTI3eiIvPjwvc3ZnPg==";
+
 
 export const translations: Record<Language, Record<string, string>> = {
   en: {
