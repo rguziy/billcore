@@ -100,10 +100,6 @@ func (r *ServiceRepo) GetActiveTariff(ctx context.Context, serviceID int) (*doma
 }
 
 func (r *ServiceRepo) CreateTariff(ctx context.Context, t *domain.Tariff) error {
-	if t.ValidTo == nil && t.ValidFrom.Before(time.Now().Truncate(24*time.Hour)) {
-		return fmt.Errorf("valid_from must not be in the past for an active tariff")
-	}
-
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
 		return err
@@ -119,18 +115,27 @@ func (r *ServiceRepo) CreateTariff(ctx context.Context, t *domain.Tariff) error 
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return err
 		}
-		if !activeValidFrom.IsZero() && !t.ValidFrom.After(activeValidFrom) {
-			return fmt.Errorf("valid_from must be after the current active tariff's valid_from (%s)",
-				activeValidFrom.Format("2006-01-02"))
-		}
 
-		_, err = tx.Exec(ctx, `
-			UPDATE billcore.tariffs
-			SET valid_to = $2::date - INTERVAL '1 day'
-			WHERE service_id = $1 AND valid_to IS NULL
-		`, t.ServiceID, t.ValidFrom)
-		if err != nil {
-			return err
+		if !activeValidFrom.IsZero() {
+			// є активний тариф — valid_from нового має бути в майбутньому і після активного
+			today := time.Now().Format("2006-01-02")
+			validFrom := t.ValidFrom.Format("2006-01-02")
+			if validFrom < today {
+				return fmt.Errorf("valid_from must not be in the past for an active tariff")
+			}
+			if !t.ValidFrom.After(activeValidFrom) {
+				return fmt.Errorf("valid_from must be after the current active tariff's valid_from (%s)",
+					activeValidFrom.Format("2006-01-02"))
+			}
+
+			_, err = tx.Exec(ctx, `
+				UPDATE billcore.tariffs
+				SET valid_to = $2::date - INTERVAL '1 day'
+				WHERE service_id = $1 AND valid_to IS NULL
+			`, t.ServiceID, t.ValidFrom)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
