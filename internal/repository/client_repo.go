@@ -4,15 +4,16 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5"
+	"github.com/rguziy/billcore/internal/db"
 	"github.com/rguziy/billcore/internal/domain"
 )
 
 type ClientRepo struct {
-	db *pgxpool.Pool
+	db *db.DB
 }
 
-func NewClientRepo(db *pgxpool.Pool) *ClientRepo {
+func NewClientRepo(db *db.DB) *ClientRepo {
 	return &ClientRepo{db: db}
 }
 
@@ -52,18 +53,18 @@ func (r *ClientRepo) Search(ctx context.Context, f ClientFilter) (*ClientPage, e
 		where += " AND is_active = FALSE"
 	}
 
-	// total count
+	// Fetch total count using the thread-safe connection pool
 	var total int
-	if err := r.db.QueryRow(ctx,
+	if err := r.db.Pool().QueryRow(ctx,
 		fmt.Sprintf(`SELECT COUNT(*) FROM billcore.clients %s`, where),
 		args...,
 	).Scan(&total); err != nil {
 		return nil, fmt.Errorf("clients count: %w", err)
 	}
 
-	// paginated rows
+	// Fetch paginated rows using the thread-safe connection pool
 	args = append(args, f.Limit, f.Offset)
-	rows, err := r.db.Query(ctx, fmt.Sprintf(`
+	rows, err := r.db.Pool().Query(ctx, fmt.Sprintf(`
 		SELECT id, full_name, phone, email, account_number, is_active, created_at, updated_at
 		FROM billcore.clients
 		%s
@@ -90,7 +91,7 @@ func (r *ClientRepo) Search(ctx context.Context, f ClientFilter) (*ClientPage, e
 }
 
 func (r *ClientRepo) GetAll(ctx context.Context) ([]domain.Client, error) {
-	rows, err := r.db.Query(ctx, `
+	rows, err := r.db.Pool().Query(ctx, `
 		SELECT id, full_name, phone, email, account_number, is_active, created_at, updated_at
 		FROM billcore.clients
 		ORDER BY full_name
@@ -116,7 +117,7 @@ func (r *ClientRepo) GetAll(ctx context.Context) ([]domain.Client, error) {
 
 func (r *ClientRepo) GetByID(ctx context.Context, id int) (*domain.Client, error) {
 	var c domain.Client
-	err := r.db.QueryRow(ctx, `
+	err := r.db.Pool().QueryRow(ctx, `
 		SELECT id, full_name, phone, email, account_number, is_active, created_at, updated_at
 		FROM billcore.clients
 		WHERE id = $1
@@ -131,32 +132,41 @@ func (r *ClientRepo) GetByID(ctx context.Context, id int) (*domain.Client, error
 }
 
 func (r *ClientRepo) Create(ctx context.Context, c *domain.Client) error {
-	return r.db.QueryRow(ctx, `
-		INSERT INTO billcore.clients (full_name, phone, email, account_number)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id, created_at, updated_at
-	`, c.FullName, c.Phone, c.Email, c.AccountNumber,
-	).Scan(&c.ID, &c.CreatedAt, &c.UpdatedAt)
+	// Execute mutation inside an audit-tracked transaction context
+	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			INSERT INTO billcore.clients (full_name, phone, email, account_number)
+			VALUES ($1, $2, $3, $4)
+			RETURNING id, created_at, updated_at
+		`, c.FullName, c.Phone, c.Email, c.AccountNumber,
+		).Scan(&c.ID, &c.CreatedAt, &c.UpdatedAt)
+	})
 }
 
 func (r *ClientRepo) Update(ctx context.Context, c *domain.Client) error {
-	_, err := r.db.Exec(ctx, `
-		UPDATE billcore.clients
-		SET full_name = $1, phone = $2, email = $3, is_active = $4
-		WHERE id = $5
-	`, c.FullName, c.Phone, c.Email, c.IsActive, c.ID)
-	return err
+	// Execute mutation inside an audit-tracked transaction context
+	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			UPDATE billcore.clients
+			SET full_name = $1, phone = $2, email = $3, is_active = $4
+			WHERE id = $5
+		`, c.FullName, c.Phone, c.Email, c.IsActive, c.ID)
+		return err
+	})
 }
 
 func (r *ClientRepo) Delete(ctx context.Context, id int) error {
-	_, err := r.db.Exec(ctx, `DELETE FROM billcore.clients WHERE id = $1`, id)
-	return err
+	// Execute mutation inside an audit-tracked transaction context
+	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `DELETE FROM billcore.clients WHERE id = $1`, id)
+		return err
+	})
 }
 
 // --- Locations ---
 
 func (r *ClientRepo) GetAllLocations(ctx context.Context) ([]domain.Location, error) {
-	rows, err := r.db.Query(ctx, `
+	rows, err := r.db.Pool().Query(ctx, `
 		SELECT l.id, l.client_id, l.name, l.address, l.is_default, l.created_at,
 		       c.full_name, c.account_number
 		FROM billcore.locations l
@@ -183,7 +193,7 @@ func (r *ClientRepo) GetAllLocations(ctx context.Context) ([]domain.Location, er
 }
 
 func (r *ClientRepo) GetLocations(ctx context.Context, clientID int) ([]domain.Location, error) {
-	rows, err := r.db.Query(ctx, `
+	rows, err := r.db.Pool().Query(ctx, `
 		SELECT id, client_id, name, address, is_default, created_at
 		FROM billcore.locations
 		WHERE client_id = $1
@@ -206,75 +216,75 @@ func (r *ClientRepo) GetLocations(ctx context.Context, clientID int) ([]domain.L
 }
 
 func (r *ClientRepo) CreateLocation(ctx context.Context, l *domain.Location) error {
-	return r.db.QueryRow(ctx, `
-		INSERT INTO billcore.locations (client_id, name, address, is_default)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id, created_at
-	`, l.ClientID, l.Name, l.Address, l.IsDefault,
-	).Scan(&l.ID, &l.CreatedAt)
+	// Execute mutation inside an audit-tracked transaction context
+	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			INSERT INTO billcore.locations (client_id, name, address, is_default)
+			VALUES ($1, $2, $3, $4)
+			RETURNING id, created_at
+		`, l.ClientID, l.Name, l.Address, l.IsDefault,
+		).Scan(&l.ID, &l.CreatedAt)
+	})
 }
 
 func (r *ClientRepo) UpdateLocation(ctx context.Context, l *domain.Location) error {
-	tx, err := r.db.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("locations update begin: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
-	if err := tx.QueryRow(ctx, `
-		SELECT client_id
-		FROM billcore.locations
-		WHERE id = $1
-	`, l.ID).Scan(&l.ClientID); err != nil {
-		return fmt.Errorf("locations get client: %w", err)
-	}
-
-	if l.IsDefault {
-		if _, err := tx.Exec(ctx, `
-			UPDATE billcore.locations
-			SET is_default = FALSE
-			WHERE client_id = $1 AND id <> $2
-		`, l.ClientID, l.ID); err != nil {
-			return fmt.Errorf("locations clear defaults: %w", err)
+	// Replaced manual tx orchestration with unified db.WithTx wrapper
+	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, `
+			SELECT client_id
+			FROM billcore.locations
+			WHERE id = $1
+		`, l.ID).Scan(&l.ClientID); err != nil {
+			return fmt.Errorf("locations get client: %w", err)
 		}
-	}
 
-	if err := tx.QueryRow(ctx, `
-		UPDATE billcore.locations
-		SET name = $1, address = $2, is_default = $3
-		WHERE id = $4
-		RETURNING created_at
-	`, l.Name, l.Address, l.IsDefault, l.ID).Scan(&l.CreatedAt); err != nil {
-		return fmt.Errorf("locations update: %w", err)
-	}
+		if l.IsDefault {
+			if _, err := tx.Exec(ctx, `
+				UPDATE billcore.locations
+				SET is_default = FALSE
+				WHERE client_id = $1 AND id <> $2
+			`, l.ClientID, l.ID); err != nil {
+				return fmt.Errorf("locations clear defaults: %w", err)
+			}
+		}
 
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("locations update commit: %w", err)
-	}
-	return nil
+		if err := tx.QueryRow(ctx, `
+			UPDATE billcore.locations
+			SET name = $1, address = $2, is_default = $3
+			WHERE id = $4
+			RETURNING created_at
+		`, l.Name, l.Address, l.IsDefault, l.ID).Scan(&l.CreatedAt); err != nil {
+			return fmt.Errorf("locations update: %w", err)
+		}
+
+		return nil
+	})
 }
 
 func (r *ClientRepo) DeleteLocation(ctx context.Context, id int) error {
-	var used bool
-	if err := r.db.QueryRow(ctx, `
-		SELECT EXISTS (
-			SELECT 1
-			FROM billcore.subscriptions
-			WHERE location_id = $1
-		)
-	`, id).Scan(&used); err != nil {
-		return fmt.Errorf("locations check usage: %w", err)
-	}
-	if used {
-		return fmt.Errorf("location is used by subscriptions")
-	}
+	// Run safety check and cascading update inside an audit-tracked transaction
+	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		var used bool
+		if err := tx.QueryRow(ctx, `
+			SELECT EXISTS (
+				SELECT 1
+				FROM billcore.subscriptions
+				WHERE location_id = $1
+			)
+		`, id).Scan(&used); err != nil {
+			return fmt.Errorf("locations check usage: %w", err)
+		}
+		if used {
+			return fmt.Errorf("location is used by subscriptions")
+		}
 
-	tag, err := r.db.Exec(ctx, `DELETE FROM billcore.locations WHERE id = $1`, id)
-	if err != nil {
-		return fmt.Errorf("locations delete: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
-		return fmt.Errorf("location not found")
-	}
-	return nil
+		tag, err := tx.Exec(ctx, `DELETE FROM billcore.locations WHERE id = $1`, id)
+		if err != nil {
+			return fmt.Errorf("locations delete: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return fmt.Errorf("location not found")
+		}
+		return nil
+	})
 }

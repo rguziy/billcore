@@ -4,20 +4,22 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5"
+	"github.com/rguziy/billcore/internal/db"
 	"github.com/rguziy/billcore/internal/domain"
 )
 
 type PeriodRepo struct {
-	db *pgxpool.Pool
+	db *db.DB
 }
 
-func NewPeriodRepo(db *pgxpool.Pool) *PeriodRepo {
+func NewPeriodRepo(db *db.DB) *PeriodRepo {
 	return &PeriodRepo{db: db}
 }
 
 func (r *PeriodRepo) GetAll(ctx context.Context) ([]domain.Period, error) {
-	rows, err := r.db.Query(ctx, `
+	// Fetch all billing periods using the thread-safe connection pool
+	rows, err := r.db.Pool().Query(ctx, `
 		SELECT id, period_start, period_end, status, created_at
 		FROM billcore.periods
 		ORDER BY period_start DESC
@@ -40,7 +42,8 @@ func (r *PeriodRepo) GetAll(ctx context.Context) ([]domain.Period, error) {
 
 func (r *PeriodRepo) GetByID(ctx context.Context, id int) (*domain.Period, error) {
 	var p domain.Period
-	err := r.db.QueryRow(ctx, `
+	// Fetch a single period record using the thread-safe connection pool
+	err := r.db.Pool().QueryRow(ctx, `
 		SELECT id, period_start, period_end, status, created_at
 		FROM billcore.periods
 		WHERE id = $1
@@ -52,56 +55,69 @@ func (r *PeriodRepo) GetByID(ctx context.Context, id int) (*domain.Period, error
 }
 
 func (r *PeriodRepo) Create(ctx context.Context, p *domain.Period) error {
-	return r.db.QueryRow(ctx, `
-		INSERT INTO billcore.periods (period_start, period_end, status)
-		VALUES ($1, $2, 'open')
-		RETURNING id, created_at
-	`, p.PeriodStart, p.PeriodEnd).Scan(&p.ID, &p.CreatedAt)
+	// Execute mutation inside an audit-tracked transaction context
+	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			INSERT INTO billcore.periods (period_start, period_end, status)
+			VALUES ($1, $2, 'open')
+			RETURNING id, created_at
+		`, p.PeriodStart, p.PeriodEnd).Scan(&p.ID, &p.CreatedAt)
+	})
 }
 
 func (r *PeriodRepo) Close(ctx context.Context, id int) error {
-	tag, err := r.db.Exec(ctx, `
-		UPDATE billcore.periods SET status = 'closed' WHERE id = $1 AND status = 'open'
-	`, id)
-	if err != nil {
-		return fmt.Errorf("period close: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
-		return fmt.Errorf("period not found or already closed")
-	}
-	return nil
+	// Execute state change update inside an audit-tracked transaction context
+	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, `
+			UPDATE billcore.periods SET status = 'closed' WHERE id = $1 AND status = 'open'
+		`, id)
+		if err != nil {
+			return fmt.Errorf("period close: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return fmt.Errorf("period not found or already closed")
+		}
+		return nil
+	})
 }
 
 func (r *PeriodRepo) Reopen(ctx context.Context, id int) error {
-	tag, err := r.db.Exec(ctx, `
-		UPDATE billcore.periods SET status = 'open' WHERE id = $1 AND status = 'closed'
-	`, id)
-	if err != nil {
-		return fmt.Errorf("period reopen: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
-		return fmt.Errorf("period not found or already open")
-	}
-	return nil
+	// Execute state change update inside an audit-tracked transaction context
+	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, `
+			UPDATE billcore.periods SET status = 'open' WHERE id = $1 AND status = 'closed'
+		`, id)
+		if err != nil {
+			return fmt.Errorf("period reopen: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return fmt.Errorf("period not found or already open")
+		}
+		return nil
+	})
 }
 
 func (r *PeriodRepo) Delete(ctx context.Context, id int) error {
-	tag, err := r.db.Exec(ctx, `
-		DELETE FROM billcore.periods WHERE id = $1
-	`, id)
-	if err != nil {
-		return fmt.Errorf("period delete: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
-		return fmt.Errorf("period not found")
-	}
-	return nil
+	// Execute structural deletion inside an audit-tracked transaction context
+	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, `
+			DELETE FROM billcore.periods WHERE id = $1
+		`, id)
+		if err != nil {
+			return fmt.Errorf("period delete: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return fmt.Errorf("period not found")
+		}
+		return nil
+	})
 }
 
 // IsOpen returns true if the period owning a calculation allows editing.
 func (r *PeriodRepo) IsOpen(ctx context.Context, periodID int) (bool, error) {
 	var status domain.PeriodStatus
-	err := r.db.QueryRow(ctx, `
+	// Fetch target state evaluation using the thread-safe connection pool
+	err := r.db.Pool().QueryRow(ctx, `
 		SELECT status FROM billcore.periods WHERE id = $1
 	`, periodID).Scan(&status)
 	if err != nil {

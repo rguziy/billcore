@@ -46,35 +46,35 @@ func main() {
 	slog.Info("migrations applied")
 
 	ctx := context.Background()
-	pool, err := db.NewPool(ctx, cfg.DB.DSN())
+	database, err := db.NewDB(ctx, cfg.DB.DSN())
 	if err != nil {
 		slog.Error("database", "err", err)
 		os.Exit(1)
 	}
-	defer pool.Close()
+	defer database.Close()
 	slog.Info("database connected")
 
 	// Repositories
-	userRepo         := repository.NewUserRepo(pool)
-	clientRepo       := repository.NewClientRepo(pool)
-	serviceRepo      := repository.NewServiceRepo(pool)
-	subscriptionRepo := repository.NewSubscriptionRepo(pool)
-	calcRepo         := repository.NewCalculationRepo(pool)
-	periodRepo       := repository.NewPeriodRepo(pool)
+	userRepo := repository.NewUserRepo(database)
+	clientRepo := repository.NewClientRepo(database)
+	serviceRepo := repository.NewServiceRepo(database)
+	subscriptionRepo := repository.NewSubscriptionRepo(database)
+	calcRepo := repository.NewCalculationRepo(database)
+	periodRepo := repository.NewPeriodRepo(database)
 
 	// Services
-	authSvc   := service.NewAuthService(userRepo, cfg.JWT.Secret)
-	reportSvc := service.NewReportService(pool)
-	periodSvc := service.NewPeriodService(pool, periodRepo, serviceRepo)
+	authSvc := service.NewAuthService(userRepo, cfg.JWT.Secret)
+	reportSvc := service.NewReportService(database)
+	periodSvc := service.NewPeriodService(database, periodRepo, serviceRepo)
 
 	// Handlers
-	authHandler         := handler.NewAuthHandler(authSvc)
-	userHandler         := handler.NewUserHandler(userRepo)
-	clientHandler       := handler.NewClientHandler(clientRepo)
-	serviceHandler      := handler.NewServiceHandler(serviceRepo)
-	calcHandler         := handler.NewCalculationHandler(calcRepo, reportSvc)
+	authHandler := handler.NewAuthHandler(authSvc)
+	userHandler := handler.NewUserHandler(userRepo)
+	clientHandler := handler.NewClientHandler(clientRepo)
+	serviceHandler := handler.NewServiceHandler(serviceRepo)
+	calcHandler := handler.NewCalculationHandler(calcRepo, reportSvc)
 	subscriptionHandler := handler.NewSubscriptionHandler(subscriptionRepo)
-	periodHandler       := handler.NewPeriodHandler(periodRepo, periodSvc)
+	periodHandler := handler.NewPeriodHandler(periodRepo, periodSvc)
 
 	apiRouter := api.NewRouter(
 		cfg.JWT.Secret,

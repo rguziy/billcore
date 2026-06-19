@@ -7,20 +7,22 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/rguziy/billcore/internal/db"
 	"github.com/rguziy/billcore/internal/domain"
 )
 
 type ServiceRepo struct {
-	db *pgxpool.Pool
+	db *db.DB
 }
 
-func NewServiceRepo(db *pgxpool.Pool) *ServiceRepo {
+func NewServiceRepo(db *db.DB) *ServiceRepo {
 	return &ServiceRepo{db: db}
 }
 
 func (r *ServiceRepo) GetAll(ctx context.Context) ([]domain.Service, error) {
-	rows, err := r.db.Query(ctx, `
+	// Query the list of services using the thread-safe connection pool
+	rows, err := r.db.Pool().Query(ctx, `
 		SELECT id, name, unit, has_meter
 		FROM billcore.services
 		ORDER BY name
@@ -42,29 +44,39 @@ func (r *ServiceRepo) GetAll(ctx context.Context) ([]domain.Service, error) {
 }
 
 func (r *ServiceRepo) Create(ctx context.Context, s *domain.Service) error {
-	return r.db.QueryRow(ctx, `
-		INSERT INTO billcore.services (name, unit, has_meter)
-		VALUES ($1, $2, $3)
-		RETURNING id
-	`, s.Name, s.Unit, s.HasMeter).Scan(&s.ID)
+	// Execute mutation inside an audit-tracked transaction context
+	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			INSERT INTO billcore.services (name, unit, has_meter)
+			VALUES ($1, $2, $3)
+			RETURNING id
+		`, s.Name, s.Unit, s.HasMeter).Scan(&s.ID)
+	})
 }
 
 func (r *ServiceRepo) Update(ctx context.Context, s *domain.Service) error {
-	_, err := r.db.Exec(ctx, `
-		UPDATE billcore.services SET name = $1, unit = $2, has_meter = $3 WHERE id = $4
-	`, s.Name, s.Unit, s.HasMeter, s.ID)
-	return err
+	// Execute mutation inside an audit-tracked transaction context
+	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			UPDATE billcore.services SET name = $1, unit = $2, has_meter = $3 WHERE id = $4
+		`, s.Name, s.Unit, s.HasMeter, s.ID)
+		return err
+	})
 }
 
 func (r *ServiceRepo) Delete(ctx context.Context, id int) error {
-	_, err := r.db.Exec(ctx, `DELETE FROM billcore.services WHERE id = $1`, id)
-	return err
+	// Execute mutation inside an audit-tracked transaction context
+	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `DELETE FROM billcore.services WHERE id = $1`, id)
+		return err
+	})
 }
 
 // --- Tariffs ---
 
 func (r *ServiceRepo) GetTariffs(ctx context.Context, serviceID int) ([]domain.Tariff, error) {
-	rows, err := r.db.Query(ctx, `
+	// Fetch all tariffs for a service using the thread-safe connection pool
+	rows, err := r.db.Pool().Query(ctx, `
 		SELECT id, service_id, price_per_unit, valid_from, valid_to, note
 		FROM billcore.tariffs
 		WHERE service_id = $1
@@ -88,7 +100,8 @@ func (r *ServiceRepo) GetTariffs(ctx context.Context, serviceID int) ([]domain.T
 
 func (r *ServiceRepo) GetActiveTariff(ctx context.Context, serviceID int) (*domain.Tariff, error) {
 	var t domain.Tariff
-	err := r.db.QueryRow(ctx, `
+	// Fetch the active tariff using the thread-safe connection pool
+	err := r.db.Pool().QueryRow(ctx, `
 		SELECT id, service_id, price_per_unit, valid_from, valid_to, note
 		FROM billcore.tariffs
 		WHERE service_id = $1 AND valid_to IS NULL
@@ -100,79 +113,78 @@ func (r *ServiceRepo) GetActiveTariff(ctx context.Context, serviceID int) (*doma
 }
 
 func (r *ServiceRepo) CreateTariff(ctx context.Context, t *domain.Tariff) error {
-	tx, err := r.db.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback(ctx)
-
-	if t.ValidTo == nil {
-		var activeValidFrom time.Time
-		err = tx.QueryRow(ctx, `
-			SELECT valid_from FROM billcore.tariffs
-			WHERE service_id = $1 AND valid_to IS NULL
-		`, t.ServiceID).Scan(&activeValidFrom)
-		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-			return err
-		}
-
-		if !activeValidFrom.IsZero() {
-			// є активний тариф — valid_from нового має бути в майбутньому і після активного
-			today := time.Now().Format("2006-01-02")
-			validFrom := t.ValidFrom.Format("2006-01-02")
-			if validFrom < today {
-				return fmt.Errorf("valid_from must not be in the past for an active tariff")
-			}
-			if !t.ValidFrom.After(activeValidFrom) {
-				return fmt.Errorf("valid_from must be after the current active tariff's valid_from (%s)",
-					activeValidFrom.Format("2006-01-02"))
-			}
-
-			_, err = tx.Exec(ctx, `
-				UPDATE billcore.tariffs
-				SET valid_to = $2::date - INTERVAL '1 day'
+	// Run timeline safety validations and mutations inside an audit-tracked transaction context
+	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		if t.ValidTo == nil {
+			var activeValidFrom time.Time
+			err := tx.QueryRow(ctx, `
+				SELECT valid_from FROM billcore.tariffs
 				WHERE service_id = $1 AND valid_to IS NULL
-			`, t.ServiceID, t.ValidFrom)
-			if err != nil {
+			`, t.ServiceID).Scan(&activeValidFrom)
+			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 				return err
 			}
+
+			if !activeValidFrom.IsZero() {
+				// Active tariff exists — new tariff's valid_from must be in the future and after the active one
+				today := time.Now().Format("2006-01-02")
+				validFrom := t.ValidFrom.Format("2006-01-02")
+				if validFrom < today {
+					return fmt.Errorf("valid_from must not be in the past for an active tariff")
+				}
+				if !t.ValidFrom.After(activeValidFrom) {
+					return fmt.Errorf("valid_from must be after the current active tariff's valid_from (%s)",
+						activeValidFrom.Format("2006-01-02"))
+				}
+
+				// Automatically close the previous tariff period
+				_, err = tx.Exec(ctx, `
+					UPDATE billcore.tariffs
+					SET valid_to = $2::date - INTERVAL '1 day'
+					WHERE service_id = $1 AND valid_to IS NULL
+				`, t.ServiceID, t.ValidFrom)
+				if err != nil {
+					return err
+				}
+			}
 		}
-	}
 
-	err = tx.QueryRow(ctx, `
-		INSERT INTO billcore.tariffs (service_id, price_per_unit, valid_from, valid_to, note)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id
-	`, t.ServiceID, t.PricePerUnit, t.ValidFrom, t.ValidTo, t.Note).Scan(&t.ID)
-	if err != nil {
-		return err
-	}
-
-	return tx.Commit(ctx)
+		return tx.QueryRow(ctx, `
+			INSERT INTO billcore.tariffs (service_id, price_per_unit, valid_from, valid_to, note)
+			VALUES ($1, $2, $3, $4, $5)
+			RETURNING id
+		`, t.ServiceID, t.PricePerUnit, t.ValidFrom, t.ValidTo, t.Note).Scan(&t.ID)
+	})
 }
 
 func (r *ServiceRepo) UpdateTariff(ctx context.Context, t *domain.Tariff) error {
-	tag, err := r.db.Exec(ctx, `
-		UPDATE billcore.tariffs
-		SET price_per_unit = $1, valid_from = $2, valid_to = $3, note = $4
-		WHERE id = $5
-	`, t.PricePerUnit, t.ValidFrom, t.ValidTo, t.Note, t.ID)
-	if err != nil {
-		return fmt.Errorf("tariffs update: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
-		return fmt.Errorf("tariff not found")
-	}
-	return nil
+	// Execute mutation inside an audit-tracked transaction context
+	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, `
+			UPDATE billcore.tariffs
+			SET price_per_unit = $1, valid_from = $2, valid_to = $3, note = $4
+			WHERE id = $5
+		`, t.PricePerUnit, t.ValidFrom, t.ValidTo, t.Note, t.ID)
+		if err != nil {
+			return fmt.Errorf("tariffs update: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return fmt.Errorf("tariff not found")
+		}
+		return nil
+	})
 }
 
 func (r *ServiceRepo) DeleteTariff(ctx context.Context, id int) error {
-	tag, err := r.db.Exec(ctx, `DELETE FROM billcore.tariffs WHERE id = $1`, id)
-	if err != nil {
-		return fmt.Errorf("tariffs delete: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
-		return fmt.Errorf("tariff not found")
-	}
-	return nil
+	// Execute mutation inside an audit-tracked transaction context
+	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, `DELETE FROM billcore.tariffs WHERE id = $1`, id)
+		if err != nil {
+			return fmt.Errorf("tariffs delete: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return fmt.Errorf("tariff not found")
+		}
+		return nil
+	})
 }

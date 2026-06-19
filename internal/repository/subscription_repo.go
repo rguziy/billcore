@@ -4,20 +4,22 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5"
+	"github.com/rguziy/billcore/internal/db"
 	"github.com/rguziy/billcore/internal/domain"
 )
 
 type SubscriptionRepo struct {
-	db *pgxpool.Pool
+	db *db.DB
 }
 
-func NewSubscriptionRepo(db *pgxpool.Pool) *SubscriptionRepo {
+func NewSubscriptionRepo(db *db.DB) *SubscriptionRepo {
 	return &SubscriptionRepo{db: db}
 }
 
 func (r *SubscriptionRepo) GetByLocation(ctx context.Context, locationID int) ([]domain.Subscription, error) {
-	rows, err := r.db.Query(ctx, `
+	// Fetch location subscriptions using the thread-safe connection pool
+	rows, err := r.db.Pool().Query(ctx, `
 		SELECT id, location_id, service_id, meter_number, connected_at, disconnected_at, note
 		FROM billcore.subscriptions
 		WHERE location_id = $1
@@ -50,23 +52,30 @@ func (r *SubscriptionRepo) GetByLocation(ctx context.Context, locationID int) ([
 }
 
 func (r *SubscriptionRepo) Create(ctx context.Context, s *domain.Subscription) error {
-	return r.db.QueryRow(ctx, `
-		INSERT INTO billcore.subscriptions (location_id, service_id, meter_number, connected_at, note)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id
-	`, s.LocationID, s.ServiceID, s.MeterNumber, s.ConnectedAt, s.Note,
-	).Scan(&s.ID)
+	// Execute mutation inside an audit-tracked transaction context
+	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			INSERT INTO billcore.subscriptions (location_id, service_id, meter_number, connected_at, note)
+			VALUES ($1, $2, $3, $4, $5)
+			RETURNING id
+		`, s.LocationID, s.ServiceID, s.MeterNumber, s.ConnectedAt, s.Note,
+		).Scan(&s.ID)
+	})
 }
 
 func (r *SubscriptionRepo) Disconnect(ctx context.Context, id int, date string) error {
-	_, err := r.db.Exec(ctx, `
-		UPDATE billcore.subscriptions SET disconnected_at = $1 WHERE id = $2
-	`, date, id)
-	return err
+	// Execute mutation inside an audit-tracked transaction context
+	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			UPDATE billcore.subscriptions SET disconnected_at = $1 WHERE id = $2
+		`, date, id)
+		return err
+	})
 }
 
 func (r *SubscriptionRepo) GetAll(ctx context.Context) ([]domain.Subscription, error) {
-	rows, err := r.db.Query(ctx, `
+	// Fetch all subscriptions using the thread-safe connection pool
+	rows, err := r.db.Pool().Query(ctx, `
 		SELECT id, location_id, service_id, meter_number, connected_at, disconnected_at, note
 		FROM billcore.subscriptions
 		ORDER BY connected_at DESC
@@ -98,15 +107,21 @@ func (r *SubscriptionRepo) GetAll(ctx context.Context) ([]domain.Subscription, e
 }
 
 func (r *SubscriptionRepo) Update(ctx context.Context, s *domain.Subscription) error {
-	_, err := r.db.Exec(ctx, `
-		UPDATE billcore.subscriptions
-		SET meter_number = $1, note = $2
-		WHERE id = $3
-	`, s.MeterNumber, s.Note, s.ID)
-	return err
+	// Execute mutation inside an audit-tracked transaction context
+	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			UPDATE billcore.subscriptions
+			SET meter_number = $1, note = $2
+			WHERE id = $3
+		`, s.MeterNumber, s.Note, s.ID)
+		return err
+	})
 }
 
 func (r *SubscriptionRepo) Delete(ctx context.Context, id int) error {
-	_, err := r.db.Exec(ctx, `DELETE FROM billcore.subscriptions WHERE id = $1`, id)
-	return err
+	// Execute mutation inside an audit-tracked transaction context
+	return r.db.WithTx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `DELETE FROM billcore.subscriptions WHERE id = $1`, id)
+		return err
+	})
 }

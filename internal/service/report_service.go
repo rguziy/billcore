@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rguziy/billcore/internal/db"
 )
 
 type ReportService struct {
-	db *pgxpool.Pool
+	db *db.DB
 }
 
-func NewReportService(db *pgxpool.Pool) *ReportService {
+func NewReportService(db *db.DB) *ReportService {
 	return &ReportService{db: db}
 }
 
@@ -24,7 +24,8 @@ type ClientBalance struct {
 
 func (s *ReportService) GetClientBalance(ctx context.Context, clientID int) (*ClientBalance, error) {
 	var b ClientBalance
-	err := s.db.QueryRow(ctx, `
+	// Execute read-only view query using the thread-safe connection pool
+	err := s.db.Pool().QueryRow(ctx, `
 		SELECT client_id, debt, paid_total
 		FROM billcore.v_client_balance
 		WHERE client_id = $1
@@ -50,7 +51,8 @@ type LatestReading struct {
 }
 
 func (s *ReportService) GetLatestReadings(ctx context.Context, clientID int) ([]LatestReading, error) {
-	rows, err := s.db.Query(ctx, `
+	// Execute complex join selection using the thread-safe connection pool
+	rows, err := s.db.Pool().Query(ctx, `
 		SELECT r.subscription_id, r.meter_number, r.service_name, r.unit,
 		       r.period_start, r.reading_prev, r.reading_curr, r.quantity, r.amount, r.status
 		FROM billcore.v_latest_readings r
@@ -91,8 +93,8 @@ type Statistics struct {
 		Operators int `json:"operators"`
 	} `json:"users"`
 	Services struct {
-		Total          int `json:"total"`
-		WithoutTariff  int `json:"without_tariff"`
+		Total         int `json:"total"`
+		WithoutTariff int `json:"without_tariff"`
 	} `json:"services"`
 	CurrentPeriod *PeriodStats `json:"current_period,omitempty"`
 }
@@ -109,8 +111,8 @@ type PeriodStats struct {
 func (s *ReportService) GetStatistics(ctx context.Context) (*Statistics, error) {
 	stats := &Statistics{}
 
-	// Clients
-	if err := s.db.QueryRow(ctx, `
+	// Fetch system dashboard counters using the thread-safe connection pool
+	if err := s.db.Pool().QueryRow(ctx, `
 		SELECT
 			COUNT(*),
 			COUNT(*) FILTER (WHERE is_active = TRUE),
@@ -120,8 +122,7 @@ func (s *ReportService) GetStatistics(ctx context.Context) (*Statistics, error) 
 		return nil, fmt.Errorf("stats clients: %w", err)
 	}
 
-	// Users
-	if err := s.db.QueryRow(ctx, `
+	if err := s.db.Pool().QueryRow(ctx, `
 		SELECT
 			COUNT(*),
 			COUNT(*) FILTER (WHERE role = 'admin'),
@@ -132,8 +133,7 @@ func (s *ReportService) GetStatistics(ctx context.Context) (*Statistics, error) 
 		return nil, fmt.Errorf("stats users: %w", err)
 	}
 
-	// Services
-	if err := s.db.QueryRow(ctx, `
+	if err := s.db.Pool().QueryRow(ctx, `
 		SELECT
 			COUNT(*),
 			COUNT(*) FILTER (WHERE id NOT IN (
@@ -147,7 +147,7 @@ func (s *ReportService) GetStatistics(ctx context.Context) (*Statistics, error) 
 	// Current period (most recent open, or last closed)
 	var ps PeriodStats
 	var periodStart interface{}
-	err := s.db.QueryRow(ctx, `
+	err := s.db.Pool().QueryRow(ctx, `
 		SELECT
 			p.id,
 			p.period_start,
