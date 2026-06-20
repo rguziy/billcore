@@ -171,6 +171,25 @@ Default credentials: `admin / admin`, `manager / manager`
 
 ## 🐳 Docker (production)
 
+### Pull from Docker Hub
+
+Pre-built images are available on [Docker Hub](https://hub.docker.com/r/rguziy/billcore):
+
+```bash
+docker pull rguziy/billcore:latest
+# or a specific version:
+docker pull rguziy/billcore:v1.2.0
+```
+
+Run with Docker Compose using the pre-built image (no build required):
+
+```bash
+curl -o docker-compose.yml https://raw.githubusercontent.com/rguziy/billcore/master/docker-compose.yml
+JWT_SECRET=your_secret docker compose up -d
+```
+
+Open [http://localhost:8080](http://localhost:8080)
+
 ### Build image
 
 ```bash

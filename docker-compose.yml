@@ -17,7 +17,7 @@ services:
       retries: 10
 
   app:
-    image: billcore:${VERSION:-latest}
+    image: rguziy/billcore:${VERSION:-latest}
     build:
       context: .
       args:
