@@ -22,7 +22,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 import type {
-  Client, ClientPage, Location, ClientBalance, Calculation, CalculationRow,
+  Client, ClientPage, Location, ClientBalance, Calculation, CalculationRow, PeriodSummary,
   Service, Tariff, Subscription, Period, OpenPeriodResponse, User,
 } from "@/types";
 
@@ -81,6 +81,7 @@ export const clientsApi = {
   balance: (clientId: number) => request<ClientBalance>(`/clients/${clientId}/balance`),
   pending: (clientId: number) => request<CalculationRow[]>(`/clients/${clientId}/pending`),
   paid: (clientId: number) => request<CalculationRow[]>(`/clients/${clientId}/paid`),
+  history: (clientId: number) => request<PeriodSummary[]>(`/clients/${clientId}/history`),
 };
 
 // --- Services ---

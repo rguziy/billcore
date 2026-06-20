@@ -99,6 +99,7 @@ func NewRouter(
 		r.Get("/clients/{id}/readings", calculations.LatestReadings)
 		r.Get("/clients/{id}/pending", calculations.ListPending)
 		r.Get("/clients/{id}/paid", calculations.ListPaid)
+		r.Get("/clients/{id}/history", calculations.ClientHistory)
 
 		// Services (read only for operator)
 		r.Get("/services", services.List)

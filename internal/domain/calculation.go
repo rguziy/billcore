@@ -57,3 +57,13 @@ type CalculationRow struct {
 	LocationName string `json:"location_name"`
 	HasMeter     bool   `json:"has_meter"`
 }
+
+// PeriodSummary is an aggregated billing summary per period for a client.
+type PeriodSummary struct {
+	PeriodID    int     `json:"period_id"`
+	PeriodStart string  `json:"period_start"`
+	Accrued     float64 `json:"accrued"`
+	Paid        float64 `json:"paid"`
+	Cancelled   float64 `json:"cancelled"`
+	Pending     float64 `json:"pending"`
+}

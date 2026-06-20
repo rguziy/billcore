@@ -281,3 +281,17 @@ func (h *CalculationHandler) LatestReadings(w http.ResponseWriter, r *http.Reque
 	}
 	writeJSON(w, readings)
 }
+
+func (h *CalculationHandler) ClientHistory(w http.ResponseWriter, r *http.Request) {
+	clientID, err := pathID(r, "id")
+	if err != nil {
+		writeError(w, err, http.StatusBadRequest)
+		return
+	}
+	rows, err := h.repo.GetPeriodHistory(r.Context(), clientID)
+	if err != nil {
+		writeError(w, err, http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, rows)
+}

@@ -406,3 +406,40 @@ func (r *CalculationRepo) scanCalculations(rows interface {
 	}
 	return calcs, nil
 }
+
+// GetPeriodHistory returns per-period billing summary for a client.
+func (r *CalculationRepo) GetPeriodHistory(ctx context.Context, clientID int) ([]domain.PeriodSummary, error) {
+	rows, err := r.db.Pool().Query(ctx, `
+		SELECT
+			p.id                                                          AS period_id,
+			TO_CHAR(p.period_start, 'YYYY-MM-DD')                        AS period_start,
+			COALESCE(SUM(c.amount), 0)                                   AS accrued,
+			COALESCE(SUM(c.amount) FILTER (WHERE c.status = 'paid'),      0) AS paid,
+			COALESCE(SUM(c.amount) FILTER (WHERE c.status = 'cancelled'), 0) AS cancelled,
+			COALESCE(SUM(c.amount) FILTER (WHERE c.status = 'pending'),   0) AS pending
+		FROM billcore.periods p
+		JOIN billcore.calculations  c  ON c.period_id       = p.id
+		JOIN billcore.subscriptions s  ON s.id              = c.subscription_id
+		JOIN billcore.locations     l  ON l.id              = s.location_id
+		WHERE l.client_id = $1
+		GROUP BY p.id, p.period_start
+		ORDER BY p.period_start DESC
+	`, clientID)
+	if err != nil {
+		return nil, fmt.Errorf("period history: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]domain.PeriodSummary, 0)
+	for rows.Next() {
+		var ps domain.PeriodSummary
+		if err := rows.Scan(
+			&ps.PeriodID, &ps.PeriodStart,
+			&ps.Accrued, &ps.Paid, &ps.Cancelled, &ps.Pending,
+		); err != nil {
+			return nil, fmt.Errorf("period history scan: %w", err)
+		}
+		result = append(result, ps)
+	}
+	return result, nil
+}

@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { clientsApi, subscriptionsApi, servicesApi } from "@/lib/api";
-import type { Client, Location, ClientBalance, CalculationRow, Subscription, Service } from "@/types";
+import type { Client, Location, ClientBalance, CalculationRow, Subscription, Service, PeriodSummary } from "@/types";
 import Modal from "@/app/_components/Modal";
 import Alert from "@/app/_components/Alert";
 import Link from "next/link";
@@ -23,7 +23,7 @@ function ClientDetailContent() {
   const [services, setServices] = useState<Service[]>([]);
   const [balance, setBalance] = useState<ClientBalance | null>(null);
   const [pending, setPending] = useState<CalculationRow[]>([]);
-  const [paid, setPaid] = useState<CalculationRow[]>([]);
+  const [history, setHistory] = useState<PeriodSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const [showLocModal, setShowLocModal] = useState(false);
@@ -57,15 +57,15 @@ function ClientDetailContent() {
 
   const load = async () => {
     try {
-      const [c, locs, bal, pend, paidCalcs, svcs] = await Promise.all([
+      const [c, locs, bal, pend, historyData, svcs] = await Promise.all([
         clientsApi.get(clientId),
         clientsApi.listLocations(clientId),
         clientsApi.balance(clientId),
         clientsApi.pending(clientId),
-        clientsApi.paid(clientId),
+        clientsApi.history(clientId),
         servicesApi.list(),
       ]);
-      setClient(c); setLocations(locs); setBalance(bal); setPending(pend); setPaid(paidCalcs); setServices(svcs);
+      setClient(c); setLocations(locs); setBalance(bal); setPending(pend); setHistory(historyData); setServices(svcs);
 
       // load subscriptions for all locations
       const allSubs = await Promise.all(locs.map((l) => subscriptionsApi.listByLocation(l.id)));
@@ -313,38 +313,39 @@ function ClientDetailContent() {
         </table>
       </div>
 
-      {/* Paid calculations history */}
+      {/* Period billing history */}
       <div className="bc-card">
         <h6 className="mb-3" style={{ fontWeight: 600 }}>{t("client_detail.payment_history", lang)}</h6>
         <table className="table bc-table mb-0">
           <thead>
             <tr>
-              <th>{t("calculations.service", lang)}</th>
-              <th>{t("calculations.location", lang)}</th>
               <th>{t("calculations.period", lang)}</th>
-              <th>{t("calculations.amount", lang)}</th>
-              <th>{t("calculations.note", lang)}</th>
+              <th className="text-end">{t("client_detail.history_accrued", lang)}</th>
+              <th className="text-end">{t("calculations.paid", lang)}</th>
+              <th className="text-end">{t("calculations.cancelled", lang)}</th>
+              <th className="text-end">{t("calculations.pending", lang)}</th>
             </tr>
           </thead>
           <tbody>
-            {paid.length === 0 && (
+            {history.length === 0 && (
               <tr><td colSpan={5} className="text-center text-muted p-3">{t("client_detail.no_paid", lang)}</td></tr>
             )}
-            {paid.map((c) => (
-              <tr key={c.id}>
-                <td className="fw-semibold">
-                  {c.service_name}
-                  <span className="text-muted ms-1" style={{ fontSize: "0.75rem" }}>({c.unit})</span>
-                </td>
-                <td style={{ fontSize: "0.85rem", color: "#64748b" }}>{c.location_name}</td>
+            {history.map((row) => (
+              <tr key={row.period_id}>
                 <td>
-                  <Link href={`/calculations?period_id=${c.period_id}&client_id=${clientId}`}
-                    className="text-decoration-none" style={{ fontSize: "0.85rem" }}>
-                    #{c.period_id}
+                  <Link href={`/calculations?period_id=${row.period_id}&client_id=${clientId}`}
+                    className="text-decoration-none fw-semibold">
+                    {new Date(row.period_start).toLocaleDateString(lang === "uk" ? "uk-UA" : "en-GB", { year: "numeric", month: "long" })}
                   </Link>
                 </td>
-                <td><strong>{c.amount.toFixed(2)}</strong></td>
-                <td>{c.note || "—"}</td>
+                <td className="text-end"><strong>{row.accrued.toFixed(2)}</strong></td>
+                <td className="text-end" style={{ color: "#059669" }}>{row.paid > 0 ? row.paid.toFixed(2) : "—"}</td>
+                <td className="text-end" style={{ color: "#94a3b8" }}>{row.cancelled > 0 ? row.cancelled.toFixed(2) : "—"}</td>
+                <td className="text-end">
+                  {row.pending > 0
+                    ? <span style={{ color: "#dc2626", fontWeight: 600 }}>{row.pending.toFixed(2)}</span>
+                    : <span style={{ color: "#059669" }}>✓</span>}
+                </td>
               </tr>
             ))}
           </tbody>

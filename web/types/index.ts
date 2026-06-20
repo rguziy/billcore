@@ -107,3 +107,12 @@ export interface OpenPeriodResponse {
   period: Period;
   generated: number;
 }
+
+export interface PeriodSummary {
+  period_id: number;
+  period_start: string;
+  accrued: number;
+  paid: number;
+  cancelled: number;
+  pending: number;
+}
