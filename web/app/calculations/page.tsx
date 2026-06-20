@@ -292,6 +292,12 @@ function CalculationsContent() {
                   </strong>
                 </div>
                 <div>
+                  <span className="text-muted me-1" style={{ fontSize: "0.8rem" }}>{t("calculations.cancelled", lang)}:</span>
+                  <strong style={{ color: "#94a3b8" }}>
+                    {calcs.filter((c) => c.status === "cancelled").reduce((s, c) => s + c.amount, 0).toFixed(2)}
+                  </strong>
+                </div>
+                <div>
                   <span className="text-muted me-1" style={{ fontSize: "0.8rem" }}>{t("calculations.pending", lang)}:</span>
                   <strong style={{ color: "#dc2626" }}>
                     {calcs.filter((c) => c.status === "pending").reduce((s, c) => s + c.amount, 0).toFixed(2)}
