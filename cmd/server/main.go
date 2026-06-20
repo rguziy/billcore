@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"io"
 	"io/fs"
 	"log/slog"
 	"net/http"
@@ -138,24 +139,43 @@ func main() {
 	slog.Info("server stopped")
 }
 
+func serveHTML(fsys fs.FS, w http.ResponseWriter, htmlPath string) {
+	f, err := fsys.Open(htmlPath)
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	defer f.Close()
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
+	io.Copy(w, f)
+}
+
 func spaHandler(fsys fs.FS) http.Handler {
 	fileServer := http.FileServer(http.FS(fsys))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		upath := path.Clean(r.URL.Path)
 		fpath := strings.TrimPrefix(upath, "/")
 		if fpath == "" || fpath == "." {
-			fileServer.ServeHTTP(w, r)
+			serveHTML(fsys, w, "index.html")
 			return
 		}
 
 		stat, err := fs.Stat(fsys, fpath)
-		if err != nil || stat.IsDir() {
+		if err == nil && stat.IsDir() {
+			// Directory — serve index.html directly to avoid 301 redirect loop
+			indexPath := strings.TrimSuffix(fpath, "/") + "/index.html"
+			if _, ierr := fs.Stat(fsys, indexPath); ierr == nil {
+				serveHTML(fsys, w, indexPath)
+				return
+			}
+		}
+
+		if err != nil {
 			if strings.HasPrefix(fpath, "_next") {
 				slog.Warn("static file not found in embed", "path", fpath, "err", err)
 			}
-			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
-			r.URL.Path = "/"
-			fileServer.ServeHTTP(w, r)
+			serveHTML(fsys, w, "index.html")
 			return
 		}
 
@@ -165,3 +185,4 @@ func spaHandler(fsys fs.FS) http.Handler {
 		fileServer.ServeHTTP(w, r)
 	})
 }
+
