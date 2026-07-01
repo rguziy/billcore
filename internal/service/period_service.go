@@ -115,6 +115,21 @@ func (s *PeriodService) OpenPeriod(ctx context.Context, req OpenPeriodRequest) (
 			var quantity float64
 			var amount float64
 
+			// Copy the note from the subscription's immediately previous
+			// calculation (if any) onto the newly generated one. This looks
+			// only at the single most recent prior period, not any note
+			// further back — if that note was cleared, it stays cleared.
+			var note *string
+			_ = tx.QueryRow(ctx, `
+				SELECT c.note
+				FROM billcore.calculations c
+				JOIN billcore.periods p ON p.id = c.period_id
+				WHERE c.subscription_id = $1
+				  AND p.period_start < $2
+				ORDER BY p.period_start DESC
+				LIMIT 1
+			`, sub.subscriptionID, req.PeriodStart).Scan(&note)
+
 			if sub.hasMeter {
 				// Get last reading_curr as the new reading_prev
 				var lastReading *float64
@@ -140,10 +155,10 @@ func (s *PeriodService) OpenPeriod(ctx context.Context, req OpenPeriodRequest) (
 
 			_, err = tx.Exec(ctx, `
 				INSERT INTO billcore.calculations
-					(subscription_id, period_id, tariff_id, reading_prev, reading_curr, quantity, amount, status)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
+					(subscription_id, period_id, tariff_id, reading_prev, reading_curr, quantity, amount, note, status)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
 				ON CONFLICT (subscription_id, period_id) DO NOTHING
-			`, sub.subscriptionID, period.ID, tariffID, readingPrev, readingCurr, quantity, amount)
+			`, sub.subscriptionID, period.ID, tariffID, readingPrev, readingCurr, quantity, amount, note)
 			if err != nil {
 				return fmt.Errorf("insert calculation for sub %d: %w", sub.subscriptionID, err)
 			}

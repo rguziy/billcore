@@ -9,9 +9,13 @@ import Alert from "@/app/_components/Alert";
 import Modal from "@/app/_components/Modal";
 import Link from "next/link";
 
-function firstOfCurrentMonth(): string {
+function firstOfNextMonth(): string {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+  const year = d.getFullYear();
+  const month = d.getMonth() + 1; // 0-indexed current month -> next month (1-indexed)
+  const nextYear = month === 12 ? year + 1 : year;
+  const nextMonth = month === 12 ? 1 : month + 1;
+  return `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`;
 }
 
 export default function PeriodsPage() {
@@ -22,7 +26,7 @@ export default function PeriodsPage() {
   const [success, setSuccess]   = useState<string | null>(null);
 
   const [showOpen, setShowOpen]   = useState(false);
-  const [openDate, setOpenDate]   = useState(firstOfCurrentMonth());
+  const [openDate, setOpenDate]   = useState(firstOfNextMonth());
 
   const [closeId, setCloseId]   = useState<number | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
